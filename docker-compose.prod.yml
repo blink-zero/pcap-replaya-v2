@@ -1,0 +1,33 @@
+services:
+  backend:
+    image: ghcr.io/jarvyta/pcap-replaya-v2-backend:latest
+    container_name: pcap-replaya-backend
+    network_mode: host
+    privileged: true
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PCAP_UPLOAD_FOLDER=/data/uploads
+      - PCAP_DB_PATH=/data/pcap-replaya-v2.db
+    volumes:
+      - pcap-uploads:/data/uploads
+      - pcap-db:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  frontend:
+    image: ghcr.io/jarvyta/pcap-replaya-v2-frontend:latest
+    container_name: pcap-replaya-frontend
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pcap-uploads:
+  pcap-db:
