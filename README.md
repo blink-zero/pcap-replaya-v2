@@ -28,7 +28,7 @@ A modern web-based PCAP replay and analysis tool. Upload packet captures, analyz
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/jarvyta/pcap-replaya-v2.git
+git clone https://github.com/blink-zero/pcap-replaya-v2.git
 cd pcap-replaya-v2
 chmod +x start.sh
 ./start.sh
