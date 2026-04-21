@@ -21,12 +21,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# CORS — auth uses the X-API-Key header (see middleware below), not cookies,
+# so allow_credentials stays False. This also keeps the wildcard default valid:
+# the CORS spec forbids allow_origins=["*"] together with allow_credentials=True.
 origins = [o.strip() for o in settings.cors_origins.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
