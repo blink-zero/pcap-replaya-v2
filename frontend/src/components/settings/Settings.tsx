@@ -6,6 +6,7 @@ import {
   type NetworkInterface, type ConfigProfile, type VersionResponse, type SystemStatus
 } from '../../services/api'
 import { formatBytes } from '../../lib/utils'
+import { ThemePicker } from './ThemePicker'
 
 export function Settings() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([])
@@ -42,6 +43,9 @@ export function Settings() {
       <h1 className="text-2xl font-bold text-zinc-100 mb-6">Settings</h1>
 
       <div className="space-y-6 max-w-2xl">
+        {/* Theme */}
+        <ThemePicker />
+
         {/* Default Interface */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-zinc-200 mb-4">Default Network Interface</h2>
