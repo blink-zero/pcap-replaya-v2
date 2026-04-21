@@ -21,6 +21,11 @@ class FilterRequest(BaseModel):
     name: Optional[str] = Field(default=None, max_length=255)
 
 
+class FilterValidateRequest(BaseModel):
+    file_id: str
+    bpf_filter: str = Field(min_length=1, max_length=1024)
+
+
 class FileAnalysis(BaseModel):
     file_id: str
     filename: str

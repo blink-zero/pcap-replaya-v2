@@ -119,8 +119,8 @@ async def filter_pcap(source_file_id: str, bpf_filter: str, name: str | None = N
     now = _now()
     db = await get_db()
     await db.execute(
-        "INSERT INTO files (id, filename, original_filename, file_path, file_size, uploaded_at, updated_at) VALUES (?,?,?,?,?,?,?)",
-        (file_id, safe_name, requested, dest_path, total_size, now, now),
+        "INSERT INTO files (id, filename, original_filename, file_path, file_size, source_file_id, filter_expression, uploaded_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        (file_id, safe_name, requested, dest_path, total_size, source_file_id, bpf_filter, now, now),
     )
     await db.commit()
 
@@ -132,15 +132,42 @@ async def filter_pcap(source_file_id: str, bpf_filter: str, name: str | None = N
         "file_format": "unknown",
         "packet_count": 0,
         "duration": 0,
+        "source_file_id": source_file_id,
+        "filter_expression": bpf_filter,
         "uploaded_at": now,
         "updated_at": now,
     }
 
 
+async def validate_bpf_filter(file_id: str, bpf_filter: str) -> dict:
+    """Compile-only validation: run tcpdump -d against the source pcap.
+
+    tcpdump -d prints compiled BPF bytecode and exits without reading
+    packets, so this is fast and doesn't touch the filesystem. Using
+    the source file (-r) picks up its exact link-layer type, so a filter
+    that's valid for EN10MB but invalid for the file's actual DLT still
+    gets caught.
+    """
+    source = await get_file(file_id)
+    cmd = ["tcpdump", "-d", "-r", source["file_path"], bpf_filter]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode == 0:
+        return {"ok": True}
+    err = (stderr.decode(errors="replace") if stderr else "").strip()
+    # tcpdump prefixes its filter errors with "tcpdump: " — strip for clarity.
+    cleaned = err.split("tcpdump: ", 1)[-1] if "tcpdump: " in err else err
+    return {"ok": False, "error": cleaned or f"tcpdump exited {proc.returncode}"}
+
+
 async def list_files() -> list[dict]:
     db = await get_db()
     cursor = await db.execute(
-        "SELECT id, filename, original_filename, file_size, file_format, packet_count, duration, uploaded_at, updated_at FROM files ORDER BY uploaded_at DESC"
+        "SELECT id, filename, original_filename, file_size, file_format, packet_count, duration, source_file_id, filter_expression, uploaded_at, updated_at FROM files ORDER BY uploaded_at DESC"
     )
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
@@ -149,7 +176,7 @@ async def list_files() -> list[dict]:
 async def get_file(file_id: str) -> dict:
     db = await get_db()
     cursor = await db.execute(
-        "SELECT id, filename, original_filename, file_path, file_size, file_format, packet_count, duration, analysis_json, uploaded_at, updated_at FROM files WHERE id=?",
+        "SELECT id, filename, original_filename, file_path, file_size, file_format, packet_count, duration, analysis_json, source_file_id, filter_expression, uploaded_at, updated_at FROM files WHERE id=?",
         (file_id,),
     )
     row = await cursor.fetchone()

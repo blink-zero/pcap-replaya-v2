@@ -48,8 +48,15 @@ export interface UploadedFile {
   file_format: string
   packet_count: number
   duration: number
+  source_file_id?: string | null
+  filter_expression?: string | null
   uploaded_at: string
   updated_at: string
+}
+
+export interface FilterValidationResponse {
+  ok: boolean
+  error?: string
 }
 
 export interface ProtocolInfo {
@@ -171,6 +178,8 @@ export const downloadFile = (id: string) => {
 export const deleteFile = (id: string) => api.delete(`/files/${id}`).then(r => r.data)
 export const filterFile = (id: string, body: { bpf_filter: string; name?: string }) =>
   api.post<UploadedFile>(`/files/${id}/filter`, body).then(r => r.data)
+export const validateFilter = (body: { file_id: string; bpf_filter: string }) =>
+  api.post<FilterValidationResponse>('/files/validate-filter', body).then(r => r.data)
 
 // Replay
 export const startReplay = (req: ReplayRequest) => api.post('/replay/start', req).then(r => r.data)

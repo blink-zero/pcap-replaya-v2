@@ -12,6 +12,26 @@ async def get_db() -> aiosqlite.Connection:
     return _db
 
 
+async def _column_exists(db: aiosqlite.Connection, table: str, column: str) -> bool:
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    rows = await cursor.fetchall()
+    return any(r["name"] == column for r in rows)
+
+
+# Additive, idempotent schema migrations. Adds a column only if it doesn't
+# already exist, so the same init_db() works on both fresh DBs (where the
+# CREATE TABLE already lists every column) and upgraded DBs (where an older
+# schema is present on disk).
+async def _migrate(db: aiosqlite.Connection):
+    additions = [
+        ("files", "source_file_id", "TEXT"),
+        ("files", "filter_expression", "TEXT"),
+    ]
+    for table, column, coltype in additions:
+        if not await _column_exists(db, table, column):
+            await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+
+
 async def init_db():
     db = await get_db()
     await db.executescript("""
@@ -25,6 +45,8 @@ async def init_db():
             packet_count INTEGER DEFAULT 0,
             duration REAL DEFAULT 0,
             analysis_json TEXT,
+            source_file_id TEXT,
+            filter_expression TEXT,
             uploaded_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -60,6 +82,7 @@ async def init_db():
             updated_at TEXT NOT NULL
         );
     """)
+    await _migrate(db)
     await db.commit()
 
 

@@ -2,7 +2,7 @@ import asyncio
 import json
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
-from models import FilterRequest
+from models import FilterRequest, FilterValidateRequest
 from services import file_service, pcap_service
 
 router = APIRouter(prefix="/files")
@@ -68,6 +68,11 @@ async def filter_file(file_id: str, req: FilterRequest):
     # Kick off analysis in the background, same as a fresh upload.
     asyncio.create_task(_analyze_bg(result["id"]))
     return result
+
+
+@router.post("/validate-filter")
+async def validate_filter(req: FilterValidateRequest):
+    return await file_service.validate_bpf_filter(req.file_id, req.bpf_filter)
 
 
 @router.delete("/{file_id}")

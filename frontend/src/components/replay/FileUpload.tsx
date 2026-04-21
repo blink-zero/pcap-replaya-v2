@@ -1,8 +1,27 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Upload, File, Trash2, Check, Filter, X } from 'lucide-react'
+import { Upload, File, Trash2, Check, Filter, X, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { uploadFile, listFiles, deleteFile, filterFile, type UploadedFile } from '../../services/api'
+import { uploadFile, listFiles, deleteFile, filterFile, validateFilter, type UploadedFile } from '../../services/api'
 import { cn, formatBytes, formatDate } from '../../lib/utils'
+
+type FilterValidation =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'valid' }
+  | { state: 'invalid'; error: string }
+
+// Curated BPF presets — covers the 90% of filters people actually type.
+const BPF_PRESETS: { label: string; expr: string }[] = [
+  { label: 'TCP', expr: 'tcp' },
+  { label: 'UDP', expr: 'udp' },
+  { label: 'ICMP', expr: 'icmp' },
+  { label: 'HTTPS', expr: 'tcp port 443' },
+  { label: 'HTTP', expr: 'tcp port 80' },
+  { label: 'DNS', expr: 'udp port 53' },
+  { label: 'No ARP/STP', expr: 'not arp and not stp' },
+  { label: 'Host…', expr: 'host 10.0.0.1' },
+  { label: 'Subnet…', expr: 'net 192.168.0.0/16' },
+]
 
 interface FileUploadProps {
   selectedFile: UploadedFile | null
@@ -18,12 +37,40 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
   const [filterExpr, setFilterExpr] = useState('')
   const [filterName, setFilterName] = useState('')
   const [filtering, setFiltering] = useState(false)
+  const [validation, setValidation] = useState<FilterValidation>({ state: 'idle' })
 
   const loadFiles = useCallback(() => {
     listFiles().then(setFiles).catch(() => {})
   }, [])
 
   useEffect(() => { loadFiles() }, [loadFiles])
+
+  // Debounced server-side BPF validation. tcpdump -d is the source of truth
+  // for "will this compile?" — cheaper than submitting and failing.
+  useEffect(() => {
+    if (!filterTarget) return
+    const expr = filterExpr.trim()
+    if (!expr) {
+      setValidation({ state: 'idle' })
+      return
+    }
+    setValidation({ state: 'checking' })
+    const fileId = filterTarget.id
+    const handle = setTimeout(async () => {
+      try {
+        const res = await validateFilter({ file_id: fileId, bpf_filter: expr })
+        // Guard against a stale response after the user kept typing.
+        setValidation(cur => {
+          if (cur.state !== 'checking') return cur
+          if (res.ok) return { state: 'valid' }
+          return { state: 'invalid', error: res.error || 'Invalid filter' }
+        })
+      } catch {
+        setValidation(cur => (cur.state === 'checking' ? { state: 'invalid', error: 'Validation request failed' } : cur))
+      }
+    }, 400)
+    return () => clearTimeout(handle)
+  }, [filterExpr, filterTarget])
 
   const handleUpload = async (file: File) => {
     if (!file.name.match(/\.(pcap|pcapng|cap)$/i)) {
@@ -68,6 +115,7 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
     setFilterTarget(file)
     setFilterExpr('')
     setFilterName('')
+    setValidation({ state: 'idle' })
   }
 
   const closeFilter = () => {
@@ -75,6 +123,7 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
     setFilterTarget(null)
     setFilterExpr('')
     setFilterName('')
+    setValidation({ state: 'idle' })
   }
 
   const submitFilter = async () => {
@@ -82,6 +131,10 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
     const expr = filterExpr.trim()
     if (!expr) {
       toast.error('Enter a BPF filter')
+      return
+    }
+    if (validation.state !== 'valid') {
+      toast.error(validation.state === 'invalid' ? validation.error : 'Wait for filter validation to finish')
       return
     }
     setFiltering(true)
@@ -96,6 +149,7 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
       setFilterTarget(null)
       setFilterExpr('')
       setFilterName('')
+      setValidation({ state: 'idle' })
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Filter failed')
     } finally {
@@ -161,7 +215,9 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
             <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Uploaded Files</p>
           </div>
           <div className="max-h-48 overflow-y-auto divide-y divide-zinc-800/50">
-            {files.map(f => (
+            {files.map(f => {
+              const parent = f.source_file_id ? files.find(x => x.id === f.source_file_id) : null
+              return (
               <button
                 key={f.id}
                 onClick={() => onSelectFile(f)}
@@ -180,6 +236,18 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
                     {f.original_filename}
                   </p>
                   <p className="text-xs text-zinc-500">{formatBytes(f.file_size)} · {formatDate(f.uploaded_at)}</p>
+                  {(parent || f.filter_expression) && (
+                    <p className="text-xs text-cyan-500/70 truncate mt-0.5">
+                      <span className="text-zinc-600">↳</span>{' '}
+                      {parent ? <>from <span className="text-zinc-400">{parent.original_filename}</span></> : 'filtered'}
+                      {f.filter_expression && (
+                        <>
+                          <span className="text-zinc-600"> · </span>
+                          <span className="font-mono text-zinc-500">{f.filter_expression}</span>
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={(e) => openFilter(f, e)}
@@ -196,7 +264,8 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
                   <Trash2 size={14} />
                 </button>
               </button>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -226,16 +295,60 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
                 <p className="text-sm text-zinc-300 truncate">{filterTarget.original_filename}</p>
               </div>
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5">BPF filter</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs text-zinc-400">BPF filter</label>
+                  {validation.state === 'checking' && (
+                    <span className="flex items-center gap-1 text-xs text-zinc-500">
+                      <Loader2 size={12} className="animate-spin" /> validating…
+                    </span>
+                  )}
+                  {validation.state === 'valid' && (
+                    <span className="flex items-center gap-1 text-xs text-green-400">
+                      <CheckCircle2 size={12} /> valid
+                    </span>
+                  )}
+                  {validation.state === 'invalid' && (
+                    <span className="flex items-center gap-1 text-xs text-red-400">
+                      <AlertCircle size={12} /> invalid
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   autoFocus
                   value={filterExpr}
                   onChange={(e) => setFilterExpr(e.target.value)}
                   placeholder='e.g. "tcp port 443" or "host 10.0.0.1 and not arp"'
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className={cn(
+                    'w-full bg-zinc-800 border rounded-lg px-3 py-2 text-sm text-zinc-200 font-mono focus:outline-none focus:ring-1',
+                    validation.state === 'invalid'
+                      ? 'border-red-500/60 focus:ring-red-500'
+                      : validation.state === 'valid'
+                        ? 'border-green-500/50 focus:ring-green-500'
+                        : 'border-zinc-700 focus:ring-cyan-500'
+                  )}
                 />
-                <p className="text-xs text-zinc-500 mt-1">Standard tcpdump/BPF capture-filter syntax.</p>
+                {validation.state === 'invalid' ? (
+                  <p className="text-xs text-red-400 mt-1 font-mono break-words">{validation.error}</p>
+                ) : (
+                  <p className="text-xs text-zinc-500 mt-1">Standard tcpdump/BPF capture-filter syntax.</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 mb-1.5">Examples (click to use)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {BPF_PRESETS.map(p => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setFilterExpr(p.expr)}
+                      className="px-2 py-0.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 rounded-md transition-colors font-mono"
+                      title={p.expr}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5">New file name <span className="text-zinc-600">(optional)</span></label>
@@ -258,7 +371,7 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
               </button>
               <button
                 onClick={submitFilter}
-                disabled={filtering || !filterExpr.trim()}
+                disabled={filtering || validation.state !== 'valid'}
                 className="px-3 py-1.5 text-sm bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {filtering ? 'Filtering…' : 'Create filtered copy'}
