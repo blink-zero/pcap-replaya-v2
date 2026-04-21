@@ -2,12 +2,45 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── Semantic design tokens ────────────────────────────────────────────
+ * Neutral surface + text scale plus status colors. Components should use
+ * these (bg-panel, border-line, text-ink-muted, …) instead of raw zinc-N
+ * references so the palette can evolve in one place.
+ *
+ * Accent palette is defined separately further down — it's user-themeable
+ * (see hooks/useTheme) and maps onto Tailwind's cyan-* utilities via the
+ * @theme inline block below. */
+:root {
+  /* Surfaces — lowest to highest elevation */
+  --surface-base:   #09090b;  /* body background */
+  --surface:        #111115;  /* standard panel */
+  --surface-raised: #1a1a20;  /* hover / menu / nested */
+  --surface-sunken: #0a0a0d;  /* form inputs */
+
+  /* Lines / dividers */
+  --line-subtle: #1a1a1e;
+  --line:        #26262c;
+  --line-strong: #3a3a42;
+
+  /* Ink (text) */
+  --ink:        #ededf0;      /* primary */
+  --ink-muted:  #a3a3ac;      /* secondary */
+  --ink-faint:  #71717a;      /* tertiary */
+  --ink-ghost:  #52525b;      /* labels */
+
+  /* Status */
+  --success: #10b981;
+  --warn:    #f59e0b;
+  --danger:  #ef4444;
+  --info:    #3b82f6;
+}
+
 /* Remap Tailwind's `cyan-*` palette onto an accent variable set. Every
- * existing `bg-cyan-500`, `text-cyan-400`, etc. now resolves to the current
- * accent color — swapping the [data-accent] attribute on <html> recolors
- * the whole app without touching any component markup. */
+ * existing `bg-cyan-500`, `text-cyan-400`, etc. now resolves to the
+ * current accent color — swapping the [data-accent] attribute on <html>
+ * recolors the whole app without touching any component markup. */
 @theme inline {
-  --color-cyan-50: var(--accent-50);
+  --color-cyan-50:  var(--accent-50);
   --color-cyan-100: var(--accent-100);
   --color-cyan-200: var(--accent-200);
   --color-cyan-300: var(--accent-300);
@@ -18,18 +51,37 @@
   --color-cyan-800: var(--accent-800);
   --color-cyan-900: var(--accent-900);
   --color-cyan-950: var(--accent-950);
+
+  /* Semantic tokens exposed as Tailwind utility colors:
+   *   bg-panel, bg-panel-raised, bg-panel-sunken, bg-base
+   *   border-line, border-line-subtle, border-line-strong
+   *   text-ink, text-ink-muted, text-ink-faint, text-ink-ghost
+   *   text-success, bg-success, etc. */
+  --color-base:         var(--surface-base);
+  --color-panel:        var(--surface);
+  --color-panel-raised: var(--surface-raised);
+  --color-panel-sunken: var(--surface-sunken);
+  --color-line:         var(--line);
+  --color-line-subtle:  var(--line-subtle);
+  --color-line-strong:  var(--line-strong);
+  --color-ink:          var(--ink);
+  --color-ink-muted:    var(--ink-muted);
+  --color-ink-faint:    var(--ink-faint);
+  --color-ink-ghost:    var(--ink-ghost);
+  --color-success:      var(--success);
+  --color-warn:         var(--warn);
+  --color-danger:       var(--danger);
+  --color-info:         var(--info);
+
+  /* Typography — system UI for body, ui-monospace for technical values
+   * (IPs, BPF expressions, IDs, hex). No webfonts so the app works
+   * offline / in air-gapped homelabs without a Google Fonts roundtrip. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", "JetBrains Mono", monospace;
 }
 
 :root {
-  --color-bg-primary: #09090b;
-  --color-bg-secondary: #18181b;
-  --color-bg-tertiary: #27272a;
-  --color-border: #3f3f46;
-  --color-text-primary: #f4f4f5;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
-
-  /* Accent palette — default Cyan. Overridden per [data-accent] below. */
+  /* Default accent: Cyan (unchanged from Tailwind defaults) */
   --accent-50:  #ecfeff;
   --accent-100: #cffafe;
   --accent-200: #a5f3fc;
@@ -119,25 +171,52 @@
 
 body {
   margin: 0;
-  background-color: #09090b;
-  color: #f4f4f5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background-color: var(--surface-base);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  /* Tabular lining digits everywhere so metrics don't jitter between
+   * renders. Individual components can opt out via font-variant-numeric. */
+  font-feature-settings: "cv11", "ss01", "tnum";
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Technical values render in the mono stack. */
+code, kbd, samp, pre, .font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Focus rings: visible on keyboard only, accent-colored, softly ringed. */
+:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Selection uses the accent subtly. */
+::selection {
+  background: color-mix(in oklab, var(--accent-500) 40%, transparent);
+  color: var(--ink);
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #18181b;
+  background: var(--surface-base);
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 3px;
+  background: var(--line-strong);
+  border: 2px solid var(--surface-base);
+  border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: var(--ink-ghost);
+}
+::-webkit-scrollbar-corner {
+  background: var(--surface-base);
 }
