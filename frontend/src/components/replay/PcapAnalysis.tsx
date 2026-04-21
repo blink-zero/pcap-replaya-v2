@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { Info } from 'lucide-react'
 import { getFileAnalysis, type FileAnalysis, type UploadedFile } from '../../services/api'
 import { formatBytes, formatDuration, formatNumber } from '../../lib/utils'
+import { Panel } from '../ui'
 
 const COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#6366f1']
 
@@ -25,21 +26,19 @@ export function PcapAnalysis({ file }: Props) {
 
   if (!file) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-zinc-200 mb-3">PCAP Analysis</h2>
-        <p className="text-sm text-zinc-500 text-center py-6">Select a file to view analysis</p>
-      </div>
+      <Panel title="PCAP analysis">
+        <p className="text-sm text-ink-faint text-center py-6">Select a file to view analysis</p>
+      </Panel>
     )
   }
 
   if (loading) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-zinc-200 mb-3">PCAP Analysis</h2>
+      <Panel title="PCAP analysis">
         <div className="flex items-center justify-center py-8">
-          <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
         </div>
-      </div>
+      </Panel>
     )
   }
 
@@ -48,56 +47,53 @@ export function PcapAnalysis({ file }: Props) {
   const protocolData = analysis.protocols.map(p => ({ name: p.name, value: p.count }))
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl">
-      <div className="px-5 py-4 border-b border-zinc-800">
-        <h2 className="text-sm font-semibold text-zinc-200">PCAP Analysis</h2>
-      </div>
+    <Panel title="PCAP analysis" padding="none">
       <div className="p-5 space-y-5">
         {analysis.analysis_limited && (
-          <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2 text-xs text-amber-300">
+          <div className="flex items-start gap-2 bg-warn/5 border border-warn/20 rounded-md px-3 py-2 text-xs text-warn">
             <Info size={14} className="shrink-0 mt-0.5" />
             <p>
               Protocol breakdown, top talkers and size distribution below are a sample of
-              the first <span className="font-mono text-amber-200">{formatNumber(analysis.analyzed_packets)}</span>{' '}
-              of <span className="font-mono text-amber-200">{formatNumber(analysis.packet_count)}</span> packets.
+              the first <span className="font-mono">{formatNumber(analysis.analyzed_packets)}</span>{' '}
+              of <span className="font-mono">{formatNumber(analysis.packet_count)}</span> packets.
               The total packet count and replay progress still use the full file.
             </p>
           </div>
         )}
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="bg-zinc-800/50 rounded-lg p-3">
-            <p className="text-zinc-500 text-xs">Packets</p>
-            <p className="text-zinc-100 font-medium">
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="bg-panel-sunken border border-line-subtle rounded-md p-2.5">
+            <p className="text-ink-faint text-[11px] uppercase tracking-[0.08em]">Packets</p>
+            <p className="text-ink font-semibold font-mono tabular-nums">
               {formatNumber(analysis.packet_count)}
               {analysis.analysis_limited && (
-                <span className="text-zinc-500 text-xs font-normal ml-1">
+                <span className="text-ink-faint text-[11px] font-normal ml-1">
                   ({formatNumber(analysis.analyzed_packets)} analysed)
                 </span>
               )}
             </p>
           </div>
-          <div className="bg-zinc-800/50 rounded-lg p-3">
-            <p className="text-zinc-500 text-xs">Duration</p>
-            <p className="text-zinc-100 font-medium">{formatDuration(analysis.duration)}</p>
+          <div className="bg-panel-sunken border border-line-subtle rounded-md p-2.5">
+            <p className="text-ink-faint text-[11px] uppercase tracking-[0.08em]">Duration</p>
+            <p className="text-ink font-semibold font-mono tabular-nums">{formatDuration(analysis.duration)}</p>
           </div>
-          <div className="bg-zinc-800/50 rounded-lg p-3">
-            <p className="text-zinc-500 text-xs">Format</p>
-            <p className="text-zinc-100 font-medium">{analysis.file_format}</p>
+          <div className="bg-panel-sunken border border-line-subtle rounded-md p-2.5">
+            <p className="text-ink-faint text-[11px] uppercase tracking-[0.08em]">Format</p>
+            <p className="text-ink font-semibold font-mono">{analysis.file_format}</p>
           </div>
-          <div className="bg-zinc-800/50 rounded-lg p-3">
-            <p className="text-zinc-500 text-xs">Data Rate</p>
-            <p className="text-zinc-100 font-medium">{formatBytes(analysis.data_rate)}/s</p>
+          <div className="bg-panel-sunken border border-line-subtle rounded-md p-2.5">
+            <p className="text-ink-faint text-[11px] uppercase tracking-[0.08em]">Data rate</p>
+            <p className="text-ink font-semibold font-mono tabular-nums">{formatBytes(analysis.data_rate)}/s</p>
           </div>
         </div>
 
         {/* Protocol chart */}
         {protocolData.length > 0 && (
           <div>
-            <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-3">Protocol Breakdown</p>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint mb-3">Protocol breakdown</p>
             <div className="flex items-center gap-4">
-              <div className="w-32 h-32">
+              <div className="w-28 h-28 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -106,8 +102,8 @@ export function PcapAnalysis({ file }: Props) {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius={28}
-                      outerRadius={52}
+                      innerRadius={26}
+                      outerRadius={48}
                       strokeWidth={0}
                     >
                       {protocolData.map((_, i) => (
@@ -115,18 +111,18 @@ export function PcapAnalysis({ file }: Props) {
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ background: '#27272a', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
-                      itemStyle={{ color: '#f4f4f5' }}
+                      contentStyle={{ background: '#1a1a20', border: '1px solid #26262c', borderRadius: 6, fontSize: 12 }}
+                      itemStyle={{ color: '#ededf0' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex-1 space-y-1.5">
+              <div className="flex-1 space-y-1">
                 {protocolData.slice(0, 6).map((p, i) => (
                   <div key={p.name} className="flex items-center gap-2 text-xs">
                     <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                    <span className="text-zinc-300 flex-1">{p.name}</span>
-                    <span className="text-zinc-500">{formatNumber(p.value)}</span>
+                    <span className="text-ink flex-1">{p.name}</span>
+                    <span className="text-ink-faint font-mono tabular-nums">{formatNumber(p.value)}</span>
                   </div>
                 ))}
               </div>
@@ -137,18 +133,18 @@ export function PcapAnalysis({ file }: Props) {
         {/* Top Talkers */}
         {analysis.top_talkers.length > 0 && (
           <div>
-            <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2">Top Talkers</p>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint mb-2">Top talkers</p>
             <div className="space-y-1">
               {analysis.top_talkers.slice(0, 5).map((t, i) => (
-                <div key={i} className="flex items-center justify-between text-xs bg-zinc-800/50 rounded px-3 py-2">
-                  <span className="text-zinc-300 font-mono text-[11px]">{t.src} &rarr; {t.dst}</span>
-                  <span className="text-zinc-500 shrink-0 ml-2">{formatNumber(t.count)} pkts ({t.percentage}%)</span>
+                <div key={i} className="flex items-center justify-between text-xs bg-panel-sunken border border-line-subtle rounded px-3 py-1.5">
+                  <span className="text-ink font-mono text-[11px]">{t.src} &rarr; {t.dst}</span>
+                  <span className="text-ink-faint shrink-0 ml-2 font-mono">{formatNumber(t.count)} pkts ({t.percentage}%)</span>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
-    </div>
+    </Panel>
   )
 }

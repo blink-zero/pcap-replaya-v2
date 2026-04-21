@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Save, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { getInterfaces, getProfiles, createProfile, type NetworkInterface, type ConfigProfile } from '../../services/api'
+import { Panel } from '../ui'
 
 export interface ReplaySettings {
   interface: string
@@ -58,38 +59,38 @@ export function ReplayConfig({ settings, onChange }: Props) {
     toast.success(`Loaded profile: ${p.name}`)
   }
 
-  return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl">
-      <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-200">Replay Configuration</h2>
-        <div className="flex items-center gap-2">
-          {profiles.length > 0 && (
-            <div className="relative group">
-              <button className="text-zinc-400 hover:text-zinc-200 transition-colors">
-                <FolderOpen size={16} />
-              </button>
-              <div className="absolute right-0 top-full mt-1 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                {profiles.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => loadProfile(p)}
-                    className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 first:rounded-t-lg last:rounded-b-lg"
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => setShowSave(!showSave)}
-            className="text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
-            <Save size={16} />
+  const headerActions = (
+    <div className="flex items-center gap-1">
+      {profiles.length > 0 && (
+        <div className="relative group">
+          <button className="p-1.5 rounded hover:bg-panel-raised text-ink-faint hover:text-ink transition-colors" title="Load profile">
+            <FolderOpen size={14} />
           </button>
+          <div className="absolute right-0 top-full mt-1 w-52 bg-panel-raised border border-line rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 overflow-hidden">
+            {profiles.map(p => (
+              <button
+                key={p.id}
+                onClick={() => loadProfile(p)}
+                className="w-full text-left px-3 py-2 text-xs text-ink hover:bg-panel border-b border-line-subtle last:border-b-0"
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+      <button
+        onClick={() => setShowSave(!showSave)}
+        className="p-1.5 rounded hover:bg-panel-raised text-ink-faint hover:text-ink transition-colors"
+        title="Save profile"
+      >
+        <Save size={14} />
+      </button>
+    </div>
+  )
 
+  return (
+    <Panel title="Replay configuration" actions={headerActions} padding="none">
       <div className="p-5 space-y-4">
         {/* Interface */}
         <div>
@@ -194,13 +195,13 @@ export function ReplayConfig({ settings, onChange }: Props) {
             />
             <button
               onClick={handleSaveProfile}
-              className="px-3 py-1.5 bg-cyan-500 text-white text-sm rounded-lg hover:bg-cyan-600 transition-colors"
+              className="px-3 py-1.5 bg-cyan-500 text-white text-sm rounded-md hover:bg-cyan-400 transition-colors"
             >
               Save
             </button>
           </div>
         )}
       </div>
-    </div>
+    </Panel>
   )
 }

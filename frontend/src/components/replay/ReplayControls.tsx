@@ -4,6 +4,7 @@ import { startReplay, stopReplay, type UploadedFile } from '../../services/api'
 import type { ReplaySettings } from './ReplayConfig'
 import type { ReplayStatus } from '../../services/api'
 import { cn } from '../../lib/utils'
+import { Panel, Badge } from '../ui'
 
 interface Props {
   file: UploadedFile | null
@@ -11,13 +12,14 @@ interface Props {
   status: ReplayStatus
 }
 
-const statusColors: Record<string, string> = {
-  idle: 'bg-zinc-700 text-zinc-300',
-  starting: 'bg-cyan-500/20 text-cyan-400',
-  running: 'bg-cyan-500/20 text-cyan-400',
-  completed: 'bg-green-500/20 text-green-400',
-  failed: 'bg-red-500/20 text-red-400',
-  stopped: 'bg-amber-500/20 text-amber-400',
+type StatusVariant = 'neutral' | 'accent' | 'success' | 'danger' | 'warn'
+const statusVariant: Record<string, StatusVariant> = {
+  idle: 'neutral',
+  starting: 'accent',
+  running: 'accent',
+  completed: 'success',
+  failed: 'danger',
+  stopped: 'warn',
 }
 
 export function ReplayControls({ file, settings, status }: Props) {
@@ -56,48 +58,44 @@ export function ReplayControls({ file, settings, status }: Props) {
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-zinc-200">Replay Controls</h2>
-        <span className={cn('px-2.5 py-1 rounded-full text-xs font-medium capitalize', statusColors[status.status] || statusColors.idle)}>
-          {status.status}
-        </span>
-      </div>
-
-      <div className="flex gap-3">
+    <Panel
+      title="Replay controls"
+      actions={<Badge variant={statusVariant[status.status] ?? 'neutral'}>{status.status}</Badge>}
+    >
+      <div className="flex gap-2">
         <button
           onClick={handleStart}
           disabled={isRunning || !file}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all',
+            'flex-1 flex items-center justify-center gap-2 h-10 rounded-md text-sm font-semibold transition-colors',
             isRunning || !file
-              ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-              : 'bg-cyan-500 hover:bg-cyan-400 text-white shadow-lg shadow-cyan-500/20'
+              ? 'bg-panel-raised text-ink-ghost cursor-not-allowed'
+              : 'bg-cyan-500 hover:bg-cyan-400 text-white shadow-[0_0_0_1px_rgba(6,182,212,0.5)]'
           )}
         >
-          <Play size={18} />
+          <Play size={16} />
           Start Replay
         </button>
         <button
           onClick={handleStop}
           disabled={!isRunning}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all',
+            'flex-1 flex items-center justify-center gap-2 h-10 rounded-md text-sm font-semibold transition-colors',
             !isRunning
-              ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-              : 'bg-red-500 hover:bg-red-400 text-white shadow-lg shadow-red-500/20'
+              ? 'bg-panel-raised text-ink-ghost cursor-not-allowed'
+              : 'bg-danger hover:bg-danger/90 text-white'
           )}
         >
-          <Square size={18} />
+          <Square size={16} />
           Stop
         </button>
       </div>
 
       {status.error && (
-        <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400">
+        <div className="mt-3 p-3 bg-danger/10 border border-danger/20 rounded-md text-xs text-danger font-mono">
           {status.error}
         </div>
       )}
-    </div>
+    </Panel>
   )
 }

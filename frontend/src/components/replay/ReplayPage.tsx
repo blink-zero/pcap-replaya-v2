@@ -12,6 +12,7 @@ import { SplitPane } from '../SplitPane'
 import { useReplayStatusContext } from '../../contexts/ReplayStatusContext'
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut'
 import { stopReplay, type UploadedFile } from '../../services/api'
+import { PageHeader } from '../ui'
 
 export function ReplayPage() {
   const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null)
@@ -62,13 +63,13 @@ export function ReplayPage() {
   )
 
   const left = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <FileUpload selectedFile={selectedFile} onSelectFile={setSelectedFile} />
       <PcapAnalysis file={selectedFile} />
     </div>
   )
   const right = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <ReplayConfig settings={settings} onChange={setSettings} />
       <ReplayControls file={selectedFile} settings={settings} status={replayStatus} />
       <ProgressMonitor status={replayStatus} connected={connected} />
@@ -77,19 +78,23 @@ export function ReplayPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-zinc-100">Upload & Replay</h1>
-        <button
-          onClick={toggleFullscreen}
-          disabled={!replayActive}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          title={replayActive ? 'Enter fullscreen (F)' : 'Start a replay to enable fullscreen'}
-        >
-          <Maximize2 size={14} />
-          Fullscreen
-          <kbd className="ml-1 px-1 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[10px] font-mono text-zinc-500">F</kbd>
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Upload & Replay"
+        description="Upload a PCAP, tune the replay settings, and blast it onto an interface."
+        actions={
+          <button
+            onClick={toggleFullscreen}
+            disabled={!replayActive}
+            className="flex items-center gap-2 px-3 h-9 text-sm bg-panel hover:bg-panel-raised border border-line text-ink-muted hover:text-ink rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title={replayActive ? 'Enter fullscreen (F)' : 'Start a replay to enable fullscreen'}
+          >
+            <Maximize2 size={14} />
+            Fullscreen
+            <kbd className="ml-1 px-1 py-0.5 bg-panel-sunken border border-line rounded text-[10px] font-mono text-ink-ghost">F</kbd>
+          </button>
+        }
+      />
 
       <SplitPane
         left={left}

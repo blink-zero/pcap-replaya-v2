@@ -3,6 +3,7 @@ import { Upload, File, Trash2, Check, Filter, X, AlertCircle, Loader2, CheckCirc
 import { toast } from 'sonner'
 import { uploadFile, listFiles, deleteFile, filterFile, validateFilter, type UploadedFile } from '../../services/api'
 import { cn, formatBytes, formatDate } from '../../lib/utils'
+import { Panel } from '../ui'
 
 type FilterValidation =
   | { state: 'idle' }
@@ -158,11 +159,7 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl">
-      <div className="px-5 py-4 border-b border-zinc-800">
-        <h2 className="text-sm font-semibold text-zinc-200">Upload PCAP</h2>
-      </div>
-
+    <Panel title="Upload PCAP" padding="none">
       {/* Drop zone */}
       <div className="p-5">
         <label
@@ -170,14 +167,14 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           className={cn(
-            'flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
-            dragOver ? 'border-cyan-500 bg-cyan-500/5' : 'border-zinc-700 hover:border-zinc-600 bg-zinc-950/50'
+            'flex flex-col items-center justify-center gap-3 p-7 border-2 border-dashed rounded-lg cursor-pointer transition-colors',
+            dragOver ? 'border-cyan-500 bg-cyan-500/5' : 'border-line-strong hover:border-ink-ghost bg-panel-sunken/50'
           )}
         >
-          <Upload size={28} className={cn(dragOver ? 'text-cyan-400' : 'text-zinc-500')} />
+          <Upload size={26} className={cn(dragOver ? 'text-cyan-400' : 'text-ink-ghost')} />
           <div className="text-center">
-            <p className="text-sm text-zinc-300">Drop PCAP file here or click to browse</p>
-            <p className="text-xs text-zinc-500 mt-1">.pcap, .pcapng, .cap</p>
+            <p className="text-sm text-ink">Drop PCAP file here or click to browse</p>
+            <p className="text-xs text-ink-faint mt-1 font-mono">.pcap, .pcapng, .cap</p>
           </div>
           <input
             type="file"
@@ -194,11 +191,11 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
         {/* Upload progress */}
         {uploading && (
           <div className="mt-4">
-            <div className="flex justify-between text-xs text-zinc-400 mb-1">
-              <span>Uploading...</span>
-              <span>{progress}%</span>
+            <div className="flex justify-between text-xs text-ink-faint mb-1">
+              <span>Uploading…</span>
+              <span className="font-mono text-ink">{progress}%</span>
             </div>
-            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-1 bg-panel-sunken rounded-full overflow-hidden">
               <div
                 className="h-full bg-cyan-500 rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
@@ -210,11 +207,11 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
 
       {/* File list */}
       {files.length > 0 && (
-        <div className="border-t border-zinc-800">
-          <div className="px-5 py-3">
-            <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Uploaded Files</p>
+        <div className="border-t border-line-subtle">
+          <div className="px-5 py-2.5">
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">Uploaded files · {files.length}</p>
           </div>
-          <div className="max-h-48 overflow-y-auto divide-y divide-zinc-800/50">
+          <div className="max-h-52 overflow-y-auto divide-y divide-line-subtle">
             {files.map(f => {
               const parent = f.source_file_id ? files.find(x => x.id === f.source_file_id) : null
               return (
@@ -222,28 +219,28 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
                 key={f.id}
                 onClick={() => onSelectFile(f)}
                 className={cn(
-                  'w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors',
-                  selectedFile?.id === f.id ? 'bg-cyan-500/10' : 'hover:bg-zinc-800/50'
+                  'w-full flex items-center gap-2.5 px-5 py-2 text-left transition-colors',
+                  selectedFile?.id === f.id ? 'bg-cyan-500/10' : 'hover:bg-panel-raised/50'
                 )}
               >
                 {selectedFile?.id === f.id ? (
                   <Check size={14} className="text-cyan-400 shrink-0" />
                 ) : (
-                  <File size={14} className="text-zinc-500 shrink-0" />
+                  <File size={14} className="text-ink-ghost shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className={cn('text-sm truncate', selectedFile?.id === f.id ? 'text-cyan-300' : 'text-zinc-300')}>
+                  <p className={cn('text-sm truncate', selectedFile?.id === f.id ? 'text-cyan-300' : 'text-ink')}>
                     {f.original_filename}
                   </p>
-                  <p className="text-xs text-zinc-500">{formatBytes(f.file_size)} · {formatDate(f.uploaded_at)}</p>
+                  <p className="text-[11px] text-ink-faint font-mono">{formatBytes(f.file_size)} · {formatDate(f.uploaded_at)}</p>
                   {(parent || f.filter_expression) && (
-                    <p className="text-xs text-cyan-500/70 truncate mt-0.5">
-                      <span className="text-zinc-600">↳</span>{' '}
-                      {parent ? <>from <span className="text-zinc-400">{parent.original_filename}</span></> : 'filtered'}
+                    <p className="text-[11px] text-cyan-400/80 truncate mt-0.5">
+                      <span className="text-ink-ghost">↳</span>{' '}
+                      {parent ? <>from <span className="text-ink-muted">{parent.original_filename}</span></> : 'filtered'}
                       {f.filter_expression && (
                         <>
-                          <span className="text-zinc-600"> · </span>
-                          <span className="font-mono text-zinc-500">{f.filter_expression}</span>
+                          <span className="text-ink-ghost"> · </span>
+                          <span className="font-mono text-ink-faint">{f.filter_expression}</span>
                         </>
                       )}
                     </p>
@@ -251,17 +248,17 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
                 </div>
                 <button
                   onClick={(e) => openFilter(f, e)}
-                  className="text-zinc-600 hover:text-cyan-400 transition-colors shrink-0"
+                  className="p-1 rounded text-ink-ghost hover:text-cyan-400 hover:bg-panel-raised transition-colors shrink-0"
                   title="Filter with BPF expression"
                 >
-                  <Filter size={14} />
+                  <Filter size={13} />
                 </button>
                 <button
                   onClick={(e) => handleDelete(f.id, e)}
-                  className="text-zinc-600 hover:text-red-400 transition-colors shrink-0"
+                  className="p-1 rounded text-ink-ghost hover:text-danger hover:bg-panel-raised transition-colors shrink-0"
                   title="Delete file"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                 </button>
               </button>
               )
@@ -380,6 +377,6 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
           </div>
         </div>
       )}
-    </div>
+    </Panel>
   )
 }
