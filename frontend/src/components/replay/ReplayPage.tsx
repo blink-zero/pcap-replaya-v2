@@ -9,7 +9,7 @@ import { ReplayControls } from './ReplayControls'
 import { ProgressMonitor } from './ProgressMonitor'
 import { FullscreenReplay } from './FullscreenReplay'
 import { SplitPane } from '../SplitPane'
-import { useWebSocket } from '../../hooks/useWebSocket'
+import { useReplayStatusContext } from '../../contexts/ReplayStatusContext'
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut'
 import { stopReplay, type UploadedFile } from '../../services/api'
 
@@ -22,7 +22,7 @@ export function ReplayPage() {
     usePps: false,
     continuous: false,
   })
-  const { replayStatus, connected } = useWebSocket()
+  const { replayStatus, connected } = useReplayStatusContext()
   const [fullscreen, setFullscreen] = useState(false)
 
   const replayActive = replayStatus.status === 'running' || replayStatus.status === 'starting'
