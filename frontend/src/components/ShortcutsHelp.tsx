@@ -6,6 +6,7 @@ interface Shortcut {
 }
 
 const SHORTCUTS: Shortcut[] = [
+  { keys: ['⌘', 'K'], desc: 'Open the command palette' },
   { keys: ['?'], desc: 'Show this shortcuts reference' },
   { keys: ['F'], desc: 'Toggle fullscreen replay view (when a replay is active)' },
   { keys: ['Esc'], desc: 'Close any open dialog or exit fullscreen' },
