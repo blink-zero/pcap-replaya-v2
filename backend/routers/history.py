@@ -53,6 +53,41 @@ async def list_history(
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
+@router.get("/stats")
+async def history_stats():
+    db = await get_db()
+    cursor = await db.execute(
+        """
+        SELECT
+            COUNT(*)                                              AS total,
+            COALESCE(SUM(packets_sent), 0)                        AS total_packets,
+            COALESCE(SUM(bytes_sent), 0)                          AS total_bytes,
+            COALESCE(AVG(duration), 0)                            AS avg_duration,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+            SUM(CASE WHEN status = 'failed'    THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN status = 'stopped'   THEN 1 ELSE 0 END) AS stopped
+        FROM replays
+        """
+    )
+    row = await cursor.fetchone()
+    d = dict(row) if row else {}
+    cursor = await db.execute(
+        "SELECT id, filename, packets_sent, bytes_sent, status, started_at "
+        "FROM replays ORDER BY started_at DESC LIMIT 20"
+    )
+    recent = [dict(r) for r in await cursor.fetchall()]
+    return {
+        "total": d.get("total", 0),
+        "total_packets": d.get("total_packets", 0),
+        "total_bytes": d.get("total_bytes", 0),
+        "avg_duration": d.get("avg_duration", 0),
+        "completed": d.get("completed", 0),
+        "failed": d.get("failed", 0),
+        "stopped": d.get("stopped", 0),
+        "recent": recent,
+    }
+
+
 @router.get("/{replay_id}")
 async def get_history_entry(replay_id: str):
     db = await get_db()

@@ -186,9 +186,28 @@ export const startReplay = (req: ReplayRequest) => api.post('/replay/start', req
 export const stopReplay = () => api.post('/replay/stop').then(r => r.data)
 export const getReplayStatus = () => api.get<ReplayStatus>('/replay/status').then(r => r.data)
 
+export interface HistoryStats {
+  total: number
+  total_packets: number
+  total_bytes: number
+  avg_duration: number
+  completed: number
+  failed: number
+  stopped: number
+  recent: {
+    id: string
+    filename: string
+    packets_sent: number
+    bytes_sent: number
+    status: string
+    started_at: string
+  }[]
+}
+
 // History
 export const getHistory = (params?: { limit?: number; offset?: number; search?: string; status?: string; sort?: string; order?: string }) =>
   api.get<HistoryResponse>('/history', { params }).then(r => r.data)
+export const getHistoryStats = () => api.get<HistoryStats>('/history/stats').then(r => r.data)
 export const getHistoryItem = (id: string) => api.get<HistoryItem>(`/history/${id}`).then(r => r.data)
 export const deleteHistoryItem = (id: string) => api.delete(`/history/${id}`).then(r => r.data)
 export const exportHistory = () => {
