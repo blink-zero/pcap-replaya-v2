@@ -7,6 +7,7 @@ import {
 import { PcapAnalysis } from '../replay/PcapAnalysis'
 import { DiffSummary } from './DiffSummary'
 import { formatBytes } from '../../lib/utils'
+import { Panel, PageHeader } from '../ui'
 
 function FileSelector({ label, tone, value, files, onChange }: {
   label: string
@@ -17,10 +18,10 @@ function FileSelector({ label, tone, value, files, onChange }: {
 }) {
   const dotClass = tone === 'a' ? 'bg-blue-400' : 'bg-violet-400'
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+    <Panel padding="sm">
       <div className="flex items-center gap-2 mb-2">
         <span className={`w-2 h-2 rounded-full ${dotClass}`} />
-        <span className="text-xs uppercase tracking-wider text-zinc-500">{label}</span>
+        <span className="text-[11px] uppercase tracking-[0.08em] text-ink-ghost">{label}</span>
       </div>
       <select
         value={value?.id ?? ''}
@@ -28,7 +29,7 @@ function FileSelector({ label, tone, value, files, onChange }: {
           const id = e.target.value
           onChange(id ? (files.find(f => f.id === id) ?? null) : null)
         }}
-        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+        className="w-full bg-panel-sunken border border-line rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-cyan-500"
       >
         <option value="">Select a file…</option>
         {files.map(f => (
@@ -40,12 +41,12 @@ function FileSelector({ label, tone, value, files, onChange }: {
       {value && (
         <button
           onClick={() => onChange(null)}
-          className="mt-2 flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
+          className="mt-2 flex items-center gap-1 text-xs text-ink-faint hover:text-ink"
         >
           <X size={12} /> clear
         </button>
       )}
-    </div>
+    </Panel>
   )
 }
 
@@ -83,17 +84,18 @@ export function ComparePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-100 mb-2">Compare PCAPs</h1>
-      <p className="text-sm text-zinc-500 mb-6">
-        Pick two captures to see their stats side-by-side — useful for spotting what changed before / after a filter or capture window.
-      </p>
+      <PageHeader
+        eyebrow="Analysis"
+        title="Compare PCAPs"
+        description="Pick two captures to see their stats side-by-side — useful for spotting what changed before / after a filter or capture window."
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-center mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-stretch mb-5">
         <FileSelector label="A" tone="a" value={fileA} files={files} onChange={setFileA} />
         <button
           onClick={swap}
           disabled={!fileA && !fileB}
-          className="h-10 px-3 self-center bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs transition-colors disabled:opacity-40 flex items-center gap-2 mx-auto md:mx-0"
+          className="self-center px-3 h-9 bg-panel hover:bg-panel-raised border border-line text-ink-muted hover:text-ink rounded-md text-xs transition-colors disabled:opacity-40 flex items-center gap-2 mx-auto md:mx-0"
           title="Swap A and B"
         >
           <ArrowLeftRight size={14} /> Swap
@@ -102,35 +104,35 @@ export function ComparePage() {
       </div>
 
       {!fileA && !fileB && (
-        <div className="bg-zinc-900/50 border border-zinc-800 border-dashed rounded-xl p-10 text-center">
-          <p className="text-sm text-zinc-400">Pick two files to begin comparing.</p>
-          <p className="text-xs text-zinc-500 mt-2">
+        <div className="bg-panel/50 border border-line-subtle border-dashed rounded-lg p-10 text-center">
+          <p className="text-sm text-ink-muted">Pick two files to begin comparing.</p>
+          <p className="text-xs text-ink-faint mt-2">
             Tip: create filtered derivatives from the Replay page to compare before/after views of the same capture.
           </p>
         </div>
       )}
 
       {fileA?.id && fileB?.id && fileA.id === fileB.id && (
-        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 mb-6 text-sm text-amber-300">
+        <div className="bg-warn/5 border border-warn/20 rounded-lg p-3 mb-5 text-sm text-warn">
           A and B are the same file. Pick different captures to see a meaningful diff.
         </div>
       )}
 
       {canDiff && analysisA && analysisB && (
-        <div className="mb-6">
+        <div className="mb-5">
           <DiffSummary a={analysisA} b={analysisB} />
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
             <span className="w-2 h-2 rounded-full bg-blue-400" /> Analysis A
           </div>
           <PcapAnalysis file={fileA} />
         </div>
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
             <span className="w-2 h-2 rounded-full bg-violet-400" /> Analysis B
           </div>
           <PcapAnalysis file={fileB} />
