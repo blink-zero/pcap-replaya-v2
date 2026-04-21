@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Play, History, Settings, Menu, X, Radio, ArrowLeftRight } from 'lucide-react'
+import { LayoutDashboard, Play, History, Settings, Menu, X, ArrowLeftRight } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
+import { Logo } from '../Logo'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -42,12 +43,10 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-6 border-b border-zinc-800">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-            <Radio size={18} className="text-cyan-400" />
-          </div>
+          <Logo size={36} className="shrink-0 shadow-lg shadow-cyan-500/10" />
           <div>
-            <h1 className="text-base font-semibold text-zinc-100">PCAP Replaya</h1>
-            <p className="text-xs text-zinc-500">v2.0</p>
+            <h1 className="text-base font-semibold text-zinc-100 leading-tight">PCAP Replaya</h1>
+            <p className="text-[11px] text-zinc-500 tracking-wide uppercase">Network capture · replay</p>
           </div>
         </div>
 

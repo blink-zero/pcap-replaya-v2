@@ -2,9 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PCAP Replaya v2</title>
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a0a0a" />
+
+    <title>PCAP Replaya — Network capture replay</title>
+    <meta name="description" content="Upload, analyse, filter, and replay PCAP captures to any network interface. Live progress, ETA, throughput charts, and side-by-side capture diffing — all in the browser." />
+    <meta name="application-name" content="PCAP Replaya" />
+    <meta name="apple-mobile-web-app-title" content="PCAP Replaya" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Favicon: modern browsers use the SVG; it scales from 16x16 through Apple-touch sizes -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="mask-icon" href="/favicon.svg" color="#06b6d4" />
+
+    <!-- PWA basics -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Open Graph / Twitter card (for link previews when a URL is shared) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PCAP Replaya" />
+    <meta property="og:description" content="Upload, analyse, filter, and replay PCAP captures from a browser UI." />
+    <meta property="og:image" content="/favicon.svg" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="PCAP Replaya" />
+    <meta name="twitter:description" content="Browser-based packet capture replay and analysis." />
+    <meta name="twitter:image" content="/favicon.svg" />
   </head>
   <body>
     <div id="root"></div>
