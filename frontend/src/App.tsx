@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Layout } from './components/layout/Layout'
@@ -5,6 +6,8 @@ import { Dashboard } from './components/dashboard/Dashboard'
 import { ReplayPage } from './components/replay/ReplayPage'
 import { ReplayHistory } from './components/history/ReplayHistory'
 import { Settings } from './components/settings/Settings'
+import { ShortcutsHelp } from './components/ShortcutsHelp'
+import { useKeyboardShortcut } from './hooks/useKeyboardShortcut'
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -28,6 +31,13 @@ function AnimatedPage({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const location = useLocation()
+  const [showHelp, setShowHelp] = useState(false)
+
+  const toggleHelp = useCallback(() => setShowHelp(v => !v), [])
+  const closeHelp = useCallback(() => setShowHelp(false), [])
+
+  useKeyboardShortcut(e => e.key === '?', toggleHelp)
+  useKeyboardShortcut(e => e.key === 'Escape', closeHelp, { enabled: showHelp })
 
   return (
     <Layout>
@@ -39,6 +49,7 @@ export default function App() {
           <Route path="/settings" element={<AnimatedPage><Settings /></AnimatedPage>} />
         </Routes>
       </AnimatePresence>
+      <ShortcutsHelp open={showHelp} onClose={closeHelp} />
     </Layout>
   )
 }
