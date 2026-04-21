@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { Info } from 'lucide-react'
 import { getFileAnalysis, type FileAnalysis, type UploadedFile } from '../../services/api'
 import { formatBytes, formatDuration, formatNumber } from '../../lib/utils'
 
@@ -52,11 +53,30 @@ export function PcapAnalysis({ file }: Props) {
         <h2 className="text-sm font-semibold text-zinc-200">PCAP Analysis</h2>
       </div>
       <div className="p-5 space-y-5">
+        {analysis.analysis_limited && (
+          <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2 text-xs text-amber-300">
+            <Info size={14} className="shrink-0 mt-0.5" />
+            <p>
+              Protocol breakdown, top talkers and size distribution below are a sample of
+              the first <span className="font-mono text-amber-200">{formatNumber(analysis.analyzed_packets)}</span>{' '}
+              of <span className="font-mono text-amber-200">{formatNumber(analysis.packet_count)}</span> packets.
+              The total packet count and replay progress still use the full file.
+            </p>
+          </div>
+        )}
+
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="bg-zinc-800/50 rounded-lg p-3">
             <p className="text-zinc-500 text-xs">Packets</p>
-            <p className="text-zinc-100 font-medium">{formatNumber(analysis.packet_count)}</p>
+            <p className="text-zinc-100 font-medium">
+              {formatNumber(analysis.packet_count)}
+              {analysis.analysis_limited && (
+                <span className="text-zinc-500 text-xs font-normal ml-1">
+                  ({formatNumber(analysis.analyzed_packets)} analysed)
+                </span>
+              )}
+            </p>
           </div>
           <div className="bg-zinc-800/50 rounded-lg p-3">
             <p className="text-zinc-500 text-xs">Duration</p>

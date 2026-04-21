@@ -32,6 +32,7 @@ class FileAnalysis(BaseModel):
     file_size: int
     file_format: str
     packet_count: int
+    analyzed_packets: int = 0
     duration: float
     start_time: Optional[str] = None
     end_time: Optional[str] = None

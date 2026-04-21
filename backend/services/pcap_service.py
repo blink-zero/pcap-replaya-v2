@@ -25,14 +25,21 @@ def analyze_pcap(file_path: str) -> dict:
     file_size = os.path.getsize(file_path)
     file_format = _detect_format(file_path)
 
+    analysis_limit = settings.analysis_packet_limit
+
+    # packet_count is the true number of packets in the file; analyzed_count is
+    # how many we fed through protocol / talker / size-bucket logic. We keep
+    # iterating past the limit so the file's total is accurate (which the
+    # replay progress bar depends on) but skip the expensive scapy haslayer()
+    # parsing once we're past the cap.
     packet_count = 0
+    analyzed_count = 0
     first_ts = None
     last_ts = None
     total_bytes = 0
     protocol_counter: Counter = Counter()
     talker_counter: Counter = Counter()
     size_buckets = {"0-64": 0, "65-128": 0, "129-256": 0, "257-512": 0, "513-1024": 0, "1025-1518": 0, "1519+": 0}
-    analysis_limited = False
 
     try:
         with PcapReader(file_path) as reader:
@@ -46,6 +53,13 @@ def analyze_pcap(file_path: str) -> dict:
                     if first_ts is None:
                         first_ts = ts
                     last_ts = ts
+
+                # Beyond the analysis cap we only bookkeep the cheap stuff
+                # above — skip every per-layer dissection below.
+                if analyzed_count >= analysis_limit:
+                    continue
+
+                analyzed_count += 1
 
                 # Protocol detection
                 if pkt.haslayer("TCP"):
@@ -89,40 +103,41 @@ def analyze_pcap(file_path: str) -> dict:
                 else:
                     size_buckets["1519+"] += 1
 
-                if packet_count >= settings.analysis_packet_limit:
-                    analysis_limited = True
-                    break
-
     except Exception as e:
         logger.error(f"Error analysing PCAP: {e}")
         raise
 
     duration = (last_ts - first_ts) if (first_ts is not None and last_ts is not None) else 0.0
     data_rate = total_bytes / duration if duration > 0 else 0.0
+    analysis_limited = analyzed_count < packet_count
 
-    # Build protocol list with percentages
+    # Percentages are calculated against the analyzed subset, not the whole
+    # file — otherwise they'd understate for large captures. The UI shows
+    # both counts so users can tell the percentages are a sample.
+    denom = analyzed_count or 1
+
     protocols = []
     for proto, count in protocol_counter.most_common():
         protocols.append({
             "name": proto,
             "count": count,
-            "percentage": round((count / packet_count * 100) if packet_count else 0, 2),
+            "percentage": round((count / denom) * 100, 2),
         })
 
-    # Top talkers
     top_talkers = []
     for (src, dst), count in talker_counter.most_common(20):
         top_talkers.append({
             "src": src,
             "dst": dst,
             "count": count,
-            "percentage": round((count / packet_count * 100) if packet_count else 0, 2),
+            "percentage": round((count / denom) * 100, 2),
         })
 
     return {
         "file_size": file_size,
         "file_format": file_format,
         "packet_count": packet_count,
+        "analyzed_packets": analyzed_count,
         "duration": round(duration, 4),
         "start_time": datetime.fromtimestamp(first_ts, tz=timezone.utc).isoformat() if first_ts else None,
         "end_time": datetime.fromtimestamp(last_ts, tz=timezone.utc).isoformat() if last_ts else None,

@@ -78,6 +78,7 @@ export interface FileAnalysis {
   file_size: number
   file_format: string
   packet_count: number
+  analyzed_packets: number
   duration: number
   start_time: string | null
   end_time: string | null
