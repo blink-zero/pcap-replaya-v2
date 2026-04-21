@@ -7,6 +7,7 @@ import {
 } from '../../services/api'
 import { formatBytes } from '../../lib/utils'
 import { ThemePicker } from './ThemePicker'
+import { Panel, PageHeader } from '../ui'
 
 export function Settings() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([])
@@ -40,19 +41,20 @@ export function Settings() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-100 mb-6">Settings</h1>
+      <PageHeader
+        eyebrow="Configuration"
+        title="Settings"
+        description="Preferences, saved replay profiles, and system info."
+      />
 
-      <div className="space-y-6 max-w-2xl">
-        {/* Theme */}
+      <div className="space-y-5 max-w-3xl">
         <ThemePicker />
 
-        {/* Default Interface */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-zinc-200 mb-4">Default Network Interface</h2>
+        <Panel title="Default network interface" description="Pre-selected when starting new replays.">
           <select
             value={defaultInterface}
             onChange={(e) => handleDefaultInterface(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            className="w-full bg-panel-sunken border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-cyan-500"
           >
             <option value="">None</option>
             {interfaces.map(i => (
@@ -61,100 +63,89 @@ export function Settings() {
               </option>
             ))}
           </select>
-          <p className="text-xs text-zinc-500 mt-2">Pre-selected when starting new replays</p>
-        </div>
+        </Panel>
 
-        {/* Config Profiles */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl">
-          <div className="px-5 py-4 border-b border-zinc-800">
-            <h2 className="text-sm font-semibold text-zinc-200">Config Profiles</h2>
-          </div>
+        <Panel
+          title="Replay profiles"
+          description={profiles.length > 0 ? `${profiles.length} saved` : 'None saved'}
+          padding="none"
+        >
           {profiles.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-zinc-500">
+            <div className="px-5 py-8 text-center text-sm text-ink-faint">
               No profiles saved. Create one from the Replay page.
             </div>
           ) : (
-            <div className="divide-y divide-zinc-800/50">
+            <ul className="divide-y divide-line-subtle">
               {profiles.map(p => (
-                <div key={p.id} className="px-5 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-zinc-200">{p.name}</p>
-                    <p className="text-xs text-zinc-500">
+                <li key={p.id} className="px-5 py-3 flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm text-ink truncate">{p.name}</p>
+                    <p className="text-xs text-ink-faint font-mono">
                       {p.interface}
                       {p.speed_unit === 'multiplier' ? ` · ${p.speed}x speed` : ` · ${p.speed} PPS`}
-                      {p.continuous ? ' · Continuous' : ''}
+                      {p.continuous ? ' · continuous' : ''}
                     </p>
                   </div>
                   <button
                     onClick={() => handleDeleteProfile(p.id)}
-                    className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors"
+                    className="p-1.5 text-ink-ghost hover:text-danger transition-colors"
+                    title="Delete profile"
                   >
                     <Trash2 size={14} />
                   </button>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </Panel>
 
-        {/* System Info */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-zinc-200 mb-4">System Information</h2>
-          <div className="space-y-2 text-sm">
+        <Panel title="System">
+          <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5 text-sm">
             {system && (
               <>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">CPU Usage</span>
-                  <span className="text-zinc-300">{system.cpu_percent.toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Memory</span>
-                  <span className="text-zinc-300">{formatBytes(system.memory_used)} / {formatBytes(system.memory_total)} ({system.memory_percent.toFixed(1)}%)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Disk</span>
-                  <span className="text-zinc-300">{formatBytes(system.disk_used)} / {formatBytes(system.disk_total)} ({system.disk_percent.toFixed(1)}%)</span>
-                </div>
+                <dt className="text-ink-faint">CPU</dt>
+                <dd className="text-ink font-mono">{system.cpu_percent.toFixed(1)}%</dd>
+                <dt className="text-ink-faint">Memory</dt>
+                <dd className="text-ink font-mono">
+                  {formatBytes(system.memory_used)} / {formatBytes(system.memory_total)}
+                  <span className="text-ink-faint"> ({system.memory_percent.toFixed(1)}%)</span>
+                </dd>
+                <dt className="text-ink-faint">Disk</dt>
+                <dd className="text-ink font-mono">
+                  {formatBytes(system.disk_used)} / {formatBytes(system.disk_total)}
+                  <span className="text-ink-faint"> ({system.disk_percent.toFixed(1)}%)</span>
+                </dd>
               </>
             )}
             {interfaces.length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Interfaces</span>
-                <span className="text-zinc-300">{interfaces.filter(i => i.is_up).length} active / {interfaces.length} total</span>
-              </div>
+              <>
+                <dt className="text-ink-faint">Interfaces</dt>
+                <dd className="text-ink">{interfaces.filter(i => i.is_up).length} up / {interfaces.length} total</dd>
+              </>
             )}
-          </div>
-        </div>
+          </dl>
+        </Panel>
 
-        {/* About */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Info size={16} className="text-cyan-400" />
-            <h2 className="text-sm font-semibold text-zinc-200">About</h2>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Application</span>
-              <span className="text-zinc-300">{version?.name || 'PCAP Replaya'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Version</span>
-              <span className="text-zinc-300">{version?.version || '—'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Engine</span>
-              <span className="text-zinc-300">tcpreplay</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Frontend</span>
-              <span className="text-zinc-300">React 18 + Tailwind CSS</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Backend</span>
-              <span className="text-zinc-300">FastAPI + SQLite</span>
-            </div>
-          </div>
-        </div>
+        <Panel
+          title={
+            <span className="flex items-center gap-2">
+              <Info size={14} className="text-cyan-400" /> About
+            </span>
+          }
+        >
+          <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5 text-sm">
+            <dt className="text-ink-faint">Application</dt>
+            <dd className="text-ink">{version?.name ?? 'PCAP Replaya'}</dd>
+            <dt className="text-ink-faint">Version</dt>
+            <dd className="text-ink font-mono">{version?.version ?? '—'}</dd>
+            <dt className="text-ink-faint">Replay engine</dt>
+            <dd className="text-ink font-mono">tcpreplay</dd>
+            <dt className="text-ink-faint">Frontend</dt>
+            <dd className="text-ink">React 19 · Tailwind CSS v4</dd>
+            <dt className="text-ink-faint">Backend</dt>
+            <dd className="text-ink">FastAPI · SQLite</dd>
+          </dl>
+        </Panel>
       </div>
     </div>
   )
