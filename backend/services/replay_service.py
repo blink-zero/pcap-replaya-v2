@@ -47,7 +47,8 @@ class ReplayManager:
         return self._status.get("status") in ("starting", "running")
 
     async def start_replay(self, file_id: str, filename: str, file_path: str,
-                           interface: str, speed: float, speed_unit: str, continuous: bool) -> str:
+                           interface: str, speed: float, speed_unit: str, continuous: bool,
+                           total_packets: int = 0) -> str:
         if self.is_running():
             raise RuntimeError("A replay is already in progress")
 
@@ -81,7 +82,9 @@ class ReplayManager:
         )
         await db.commit()
 
-        self._task = asyncio.create_task(self._run(file_path, interface, speed, speed_unit, continuous, replay_id))
+        self._task = asyncio.create_task(
+            self._run(file_path, interface, speed, speed_unit, continuous, replay_id, total_packets)
+        )
         return replay_id
 
     async def stop_replay(self) -> bool:
@@ -108,15 +111,15 @@ class ReplayManager:
     def _build_cmd(self, file_path: str, interface: str, speed: float, speed_unit: str) -> list[str]:
         cmd = ["tcpreplay", "-i", interface]
         if speed_unit == "pps":
-            cmd.extend(["--pps", str(int(speed))])
+            cmd.append(f"--pps={int(speed)}")
         else:
-            cmd.extend(["--multiplier", f"{speed:.2f}"])
-        cmd.extend(["--timer", "select", "--quiet"])
+            cmd.append(f"--multiplier={speed:.2f}")
+        cmd.extend(["--timer=nano", "--stats=1"])
         cmd.append(file_path)
         return cmd
 
     async def _run(self, file_path: str, interface: str, speed: float, speed_unit: str,
-                   continuous: bool, replay_id: str):
+                   continuous: bool, replay_id: str, total_packets: int = 0):
         try:
             self._status["status"] = "running"
             await self._broadcast(self._status)
@@ -124,36 +127,32 @@ class ReplayManager:
             while not self._stop_event.is_set():
                 self._status["loop_count"] += 1
                 self._status["progress_percent"] = 0
+                self._status["packets_sent"] = 0
+                self._status["bytes_sent"] = 0
+                self._status["elapsed_time"] = 0
 
                 cmd = self._build_cmd(file_path, interface, speed, speed_unit)
                 logger.info(f"REPLAY_COMMAND: {' '.join(cmd)}")
 
                 start_time = time.monotonic()
+                stderr_buffer: list[str] = []
                 self._process = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
 
-                # Progress emitter — broadcasts every 1 second while process runs
-                async def emit_progress():
-                    while self._process and self._process.returncode is None:
-                        elapsed = time.monotonic() - start_time
-                        self._status["elapsed_time"] = round(elapsed, 2)
-                        await self._broadcast(self._status)
-                        await asyncio.sleep(1)
+                readers = [
+                    asyncio.create_task(self._consume_stream(self._process.stdout, start_time, total_packets)),
+                    asyncio.create_task(self._consume_stream(self._process.stderr, start_time, total_packets, error_buffer=stderr_buffer)),
+                ]
 
-                progress_task = asyncio.create_task(emit_progress())
-
-                stdout, stderr = await self._process.communicate()
-                progress_task.cancel()
-
-                # Parse final output
-                self._parse_output(stdout.decode() if stdout else "")
-                self._parse_output(stderr.decode() if stderr else "")
+                await self._process.wait()
+                # Let readers drain any remaining buffered lines
+                await asyncio.gather(*readers, return_exceptions=True)
 
                 if self._process.returncode != 0 and not self._stop_event.is_set():
-                    err = stderr.decode().strip() if stderr else f"tcpreplay exited with code {self._process.returncode}"
+                    err = "\n".join(stderr_buffer).strip() or f"tcpreplay exited with code {self._process.returncode}"
                     self._status["error"] = err
                     self._status["status"] = "failed"
                     break
@@ -190,15 +189,38 @@ class ReplayManager:
         finally:
             self._process = None
 
+    # Matches tcpreplay stats lines like:
+    #   "Actual: 1234 packets (567890 bytes) sent in 1.00 seconds"
+    # Emitted periodically with --stats=N and once at the end.
     _ACTUAL_RE = re.compile(r"(\d+)\s+packets\s+\((\d+)\s+bytes\)\s+sent in\s+([\d.]+)\s+seconds")
 
-    def _parse_output(self, text: str):
-        for line in text.splitlines():
+    async def _consume_stream(self, stream, start_time: float, total_packets: int,
+                              error_buffer: Optional[list[str]] = None):
+        if stream is None:
+            return
+        last_broadcast = 0.0
+        while True:
+            raw = await stream.readline()
+            if not raw:
+                break
+            line = raw.decode(errors="replace").strip()
+            if not line:
+                continue
             m = self._ACTUAL_RE.search(line)
             if m:
-                self._status["packets_sent"] = int(m.group(1))
+                packets = int(m.group(1))
+                self._status["packets_sent"] = packets
                 self._status["bytes_sent"] = int(m.group(2))
-                self._status["elapsed_time"] = float(m.group(3))
+                self._status["elapsed_time"] = round(time.monotonic() - start_time, 2)
+                if total_packets > 0:
+                    pct = min(100.0, (packets / total_packets) * 100.0)
+                    self._status["progress_percent"] = round(pct, 2)
+                now = time.monotonic()
+                if now - last_broadcast >= 0.25:
+                    await self._broadcast(self._status)
+                    last_broadcast = now
+            elif error_buffer is not None:
+                error_buffer.append(line)
 
     async def _persist_final(self):
         try:
