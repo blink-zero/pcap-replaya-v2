@@ -3,14 +3,23 @@ import { Search, ChevronUp, ChevronDown, Trash2, Download, Play, FileDown, Chevr
 import { toast } from 'sonner'
 import { getHistory, deleteHistoryItem, downloadFile, exportHistory, type HistoryItem } from '../../services/api'
 import { cn, formatBytes, formatDate, formatDuration, formatNumber } from '../../lib/utils'
+import { Panel, PageHeader, Badge } from '../ui'
 
 type SortKey = 'started_at' | 'filename' | 'status' | 'duration' | 'packets_sent'
+
+type StatusVariant = 'success' | 'danger' | 'warn' | 'neutral'
+
+const STATUS_VARIANT: Record<string, StatusVariant> = {
+  completed: 'success',
+  failed:    'danger',
+  stopped:   'warn',
+}
 
 export function ReplayHistory() {
   const [items, setItems] = useState<HistoryItem[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [perPage] = useState(15)
+  const [perPage] = useState(20)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('started_at')
@@ -18,23 +27,25 @@ export function ReplayHistory() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const load = useCallback(() => {
-    getHistory({ limit: perPage, offset: (page - 1) * perPage, search: search || undefined, status: statusFilter || undefined, sort: sortBy, order: sortDir })
+    getHistory({
+      limit: perPage,
+      offset: (page - 1) * perPage,
+      search: search || undefined,
+      status: statusFilter || undefined,
+      sort: sortBy,
+      order: sortDir,
+    })
       .then(r => { setItems(r.items); setTotal(r.total) })
       .catch(() => toast.error('Failed to load history'))
   }, [page, perPage, search, statusFilter, sortBy, sortDir])
 
   useEffect(() => { load() }, [load])
 
-  const totalPages = Math.ceil(total / perPage)
+  const totalPages = Math.ceil(total / perPage) || 1
 
   const toggleSort = (key: SortKey) => {
     if (sortBy === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortBy(key); setSortDir('desc') }
-  }
-
-  const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortBy !== col) return <ChevronDown size={12} className="text-zinc-600" />
-    return sortDir === 'asc' ? <ChevronUp size={12} className="text-cyan-400" /> : <ChevronDown size={12} className="text-cyan-400" />
   }
 
   const handleDelete = async (id: string) => {
@@ -58,7 +69,7 @@ export function ReplayHistory() {
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
   }
@@ -68,163 +79,186 @@ export function ReplayHistory() {
     else setSelected(new Set(items.map(i => i.id)))
   }
 
-  const statusBadge = (s: string) => {
-    const colors: Record<string, string> = {
-      completed: 'bg-green-500/10 text-green-400',
-      failed: 'bg-red-500/10 text-red-400',
-      stopped: 'bg-amber-500/10 text-amber-400',
-    }
-    return <span className={cn('px-2 py-0.5 rounded text-xs font-medium capitalize', colors[s] || 'bg-zinc-700 text-zinc-300')}>{s}</span>
+  const ThCell = ({ col, label, align = 'left' }: { col: SortKey; label: string; align?: 'left' | 'right' }) => {
+    const active = sortBy === col
+    return (
+      <th
+        onClick={() => toggleSort(col)}
+        className={cn(
+          'px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] cursor-pointer select-none transition-colors',
+          active ? 'text-cyan-300' : 'text-ink-faint hover:text-ink',
+          align === 'right' ? 'text-right' : 'text-left',
+        )}
+        aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      >
+        <span className={cn('inline-flex items-center gap-1', align === 'right' && 'flex-row-reverse')}>
+          {label}
+          {active
+            ? (sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />)
+            : <ChevronDown size={11} className="text-ink-ghost" />}
+        </span>
+      </th>
+    )
   }
+
+  const rangeStart = total === 0 ? 0 : (page - 1) * perPage + 1
+  const rangeEnd   = Math.min(page * perPage, total)
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-100 mb-6">Replay History</h1>
+      <PageHeader
+        eyebrow="Log"
+        title="Replay History"
+        description="Every replay run, sortable and filterable. Use the command palette (⌘K) to jump between views."
+      />
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Search files..."
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-        >
-          <option value="">All statuses</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed</option>
-          <option value="stopped">Stopped</option>
-        </select>
-        <button
-          onClick={() => exportHistory()}
-          className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-        >
-          <FileDown size={16} />
-          Export CSV
-        </button>
-        {selected.size > 0 && (
-          <button
-            onClick={handleBulkDelete}
-            className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 hover:bg-red-500/20 transition-colors"
+      <Panel padding="sm" className="mb-3">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1 min-w-[14rem]">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-ghost" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Search filename…"
+              className="w-full bg-panel-sunken border border-line rounded-md pl-8 pr-3 py-1.5 text-sm text-ink placeholder:text-ink-ghost focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+            className="bg-panel-sunken border border-line rounded-md px-2.5 py-1.5 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-cyan-500"
           >
-            <Trash2 size={16} />
-            Delete ({selected.size})
+            <option value="">All statuses</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+            <option value="stopped">Stopped</option>
+          </select>
+          <button
+            onClick={() => exportHistory()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-panel hover:bg-panel-raised border border-line rounded-md text-sm text-ink-muted hover:text-ink transition-colors"
+          >
+            <FileDown size={14} />
+            Export CSV
           </button>
-        )}
-      </div>
+          {selected.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-danger/10 border border-danger/20 rounded-md text-sm text-danger hover:bg-danger/20 transition-colors"
+            >
+              <Trash2 size={14} />
+              Delete {selected.size}
+            </button>
+          )}
+        </div>
+      </Panel>
 
       {/* Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <Panel padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-800">
-                <th className="px-4 py-3 text-left">
+            <thead className="bg-panel-sunken/60 border-b border-line">
+              <tr>
+                <th className="w-10 px-3 py-2">
                   <input
                     type="checkbox"
                     checked={items.length > 0 && selected.size === items.length}
                     onChange={toggleAll}
-                    className="rounded border-zinc-600 bg-zinc-800 accent-cyan-500"
+                    className="accent-cyan-500"
+                    aria-label="Select all"
                   />
                 </th>
-                {([
-                  ['started_at', 'Date'],
-                  ['filename', 'File'],
-                  ['status', 'Status'],
-                  ['duration', 'Duration'],
-                  ['packets_sent', 'Packets'],
-                ] as [SortKey, string][]).map(([key, label]) => (
-                  <th
-                    key={key}
-                    onClick={() => toggleSort(key)}
-                    className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider cursor-pointer hover:text-zinc-200 select-none"
-                  >
-                    <div className="flex items-center gap-1">
-                      {label}
-                      <SortIcon col={key} />
-                    </div>
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider">Actions</th>
+                <ThCell col="started_at"   label="Date" />
+                <ThCell col="filename"     label="File" />
+                <ThCell col="status"       label="Status" />
+                <ThCell col="duration"     label="Duration" align="right" />
+                <ThCell col="packets_sent" label="Packets" align="right" />
+                <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/50">
+            <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-zinc-500">
-                    No replay history found
+                  <td colSpan={7} className="px-3 py-10 text-center text-ink-faint text-sm">
+                    No replay history matches the current filters.
                   </td>
                 </tr>
-              ) : items.map(item => (
-                <tr key={item.id} className={cn('hover:bg-zinc-800/30 transition-colors', selected.has(item.id) && 'bg-cyan-500/5')}>
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(item.id)}
-                      onChange={() => toggleSelect(item.id)}
-                      className="rounded border-zinc-600 bg-zinc-800 accent-cyan-500"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-zinc-300 whitespace-nowrap">{formatDate(item.started_at)}</td>
-                  <td className="px-4 py-3">
-                    <p className="text-zinc-200 truncate max-w-[200px]">{item.filename}</p>
-                    <p className="text-xs text-zinc-500">{item.interface} · {formatBytes(item.bytes_sent)}</p>
-                  </td>
-                  <td className="px-4 py-3">{statusBadge(item.status)}</td>
-                  <td className="px-4 py-3 text-zinc-300">{formatDuration(item.duration)}</td>
-                  <td className="px-4 py-3 text-zinc-300">{formatNumber(item.packets_sent)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => window.location.href = '/replay'}
-                        title="Re-replay"
-                        className="p-1.5 text-zinc-500 hover:text-cyan-400 transition-colors"
-                      >
-                        <Play size={14} />
-                      </button>
-                      <button
-                        onClick={() => downloadFile(item.file_id)}
-                        title="Download PCAP"
-                        className="p-1.5 text-zinc-500 hover:text-blue-400 transition-colors"
-                      >
-                        <Download size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        title="Delete"
-                        className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              ) : items.map(item => {
+                const variant = STATUS_VARIANT[item.status] ?? 'neutral'
+                const isSel = selected.has(item.id)
+                return (
+                  <tr
+                    key={item.id}
+                    className={cn(
+                      'border-b border-line-subtle last:border-b-0 transition-colors',
+                      isSel ? 'bg-cyan-500/5' : 'hover:bg-panel-raised/40',
+                    )}
+                  >
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={isSel}
+                        onChange={() => toggleSelect(item.id)}
+                        className="accent-cyan-500"
+                        aria-label="Select row"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-ink-muted whitespace-nowrap text-[12px] font-mono">{formatDate(item.started_at)}</td>
+                    <td className="px-3 py-2">
+                      <p className="text-ink truncate max-w-[240px]">{item.filename}</p>
+                      <p className="text-[11px] text-ink-faint font-mono">
+                        {item.interface} · {formatBytes(item.bytes_sent)}
+                      </p>
+                    </td>
+                    <td className="px-3 py-2"><Badge variant={variant} size="xs">{item.status}</Badge></td>
+                    <td className="px-3 py-2 text-right text-ink font-mono tabular-nums">{formatDuration(item.duration)}</td>
+                    <td className="px-3 py-2 text-right text-ink font-mono tabular-nums">{formatNumber(item.packets_sent)}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <button
+                          onClick={() => window.location.href = '/replay'}
+                          title="Re-run from Replay page"
+                          className="p-1.5 text-ink-ghost hover:text-cyan-400 rounded hover:bg-panel-raised transition-colors"
+                        >
+                          <Play size={13} />
+                        </button>
+                        <button
+                          onClick={() => downloadFile(item.file_id)}
+                          title="Download PCAP"
+                          className="p-1.5 text-ink-ghost hover:text-info rounded hover:bg-panel-raised transition-colors"
+                        >
+                          <Download size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          title="Delete history entry"
+                          className="p-1.5 text-ink-ghost hover:text-danger rounded hover:bg-panel-raised transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
-            <p className="text-xs text-zinc-500">
-              Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total}
-            </p>
-            <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-line-subtle">
+          <p className="text-xs text-ink-faint font-mono">
+            {total === 0 ? 'No entries' : <>Showing <span className="text-ink">{rangeStart}–{rangeEnd}</span> of <span className="text-ink">{total}</span></>}
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-0.5">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-1.5 text-zinc-400 hover:text-zinc-200 disabled:text-zinc-600 disabled:cursor-not-allowed"
+                className="h-7 w-7 flex items-center justify-center rounded text-ink-muted hover:text-ink hover:bg-panel-raised disabled:text-ink-ghost disabled:hover:bg-transparent disabled:cursor-not-allowed"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
               </button>
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const start = Math.max(1, Math.min(page - 2, totalPages - 4))
@@ -235,8 +269,8 @@ export function ReplayHistory() {
                     key={p}
                     onClick={() => setPage(p)}
                     className={cn(
-                      'w-8 h-8 rounded text-xs font-medium transition-colors',
-                      p === page ? 'bg-cyan-500/20 text-cyan-400' : 'text-zinc-400 hover:bg-zinc-800'
+                      'h-7 min-w-[1.75rem] px-1.5 rounded text-xs font-mono transition-colors',
+                      p === page ? 'bg-cyan-500/15 text-cyan-300 ring-1 ring-inset ring-cyan-500/25' : 'text-ink-muted hover:text-ink hover:bg-panel-raised',
                     )}
                   >
                     {p}
@@ -246,14 +280,14 @@ export function ReplayHistory() {
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="p-1.5 text-zinc-400 hover:text-zinc-200 disabled:text-zinc-600 disabled:cursor-not-allowed"
+                className="h-7 w-7 flex items-center justify-center rounded text-ink-muted hover:text-ink hover:bg-panel-raised disabled:text-ink-ghost disabled:hover:bg-transparent disabled:cursor-not-allowed"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={14} />
               </button>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </Panel>
     </div>
   )
 }
