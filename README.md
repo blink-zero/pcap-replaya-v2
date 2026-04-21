@@ -8,8 +8,6 @@
 
 A modern web-based PCAP replay and analysis tool. Upload packet captures, analyze protocols, and replay traffic to network interfaces — all from a sleek browser UI.
 
-![Screenshots Coming Soon](https://via.placeholder.com/800x400?text=PCAP+Replaya+v2+Screenshots)
-
 ---
 
 ## ✨ Features
