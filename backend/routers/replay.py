@@ -18,6 +18,7 @@ async def start_replay(req: ReplayStartRequest):
             speed=req.speed,
             speed_unit=req.speed_unit,
             continuous=req.continuous,
+            total_packets=f.get("packet_count") or 0,
         )
     except RuntimeError as e:
         raise HTTPException(409, str(e))
