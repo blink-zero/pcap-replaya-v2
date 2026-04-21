@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/jarvyta/pcap-replaya-v2-backend:latest
+    image: ghcr.io/blink-zero/pcap-replaya-v2-backend:latest
     container_name: pcap-replaya-backend
     network_mode: host
     privileged: true
@@ -20,7 +20,7 @@ services:
       retries: 3
 
   frontend:
-    image: ghcr.io/jarvyta/pcap-replaya-v2-frontend:latest
+    image: ghcr.io/blink-zero/pcap-replaya-v2-frontend:latest
     container_name: pcap-replaya-frontend
     network_mode: host
     restart: unless-stopped
