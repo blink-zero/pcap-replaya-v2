@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.npm/
+.yarn/
+
+# Frontend build outputs
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# Environment files (keep the example template)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Databases and runtime data
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+/data/
+
+# Logs
+*.log
+logs/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS cruft
+.DS_Store
+Thumbs.db
