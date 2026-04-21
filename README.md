@@ -1,5 +1,6 @@
 # 🎬 PCAP Replaya v2
 
+[![Build & publish images](https://github.com/blink-zero/pcap-replaya-v2/actions/workflows/build.yml/badge.svg)](https://github.com/blink-zero/pcap-replaya-v2/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker-compose.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)](backend/)
@@ -44,6 +45,31 @@ docker compose up -d --build
 Open **http://localhost** in your browser.
 
 > **Note:** The backend runs with `network_mode: host` and `privileged: true` to access network interfaces for tcpreplay.
+
+---
+
+## 🐳 Pre-built images
+
+Images are published to GitHub Container Registry on every push to `main` and on every tagged release:
+
+- `ghcr.io/blink-zero/pcap-replaya-v2-backend`
+- `ghcr.io/blink-zero/pcap-replaya-v2-frontend`
+
+Both images are built for `linux/amd64` and `linux/arm64`. To run without building locally:
+
+```bash
+cp .env.example .env    # Edit as needed
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Available tags:
+
+| Tag | Description |
+|---|---|
+| `latest` | Latest build from `main` |
+| `v1.2.3`, `v1.2`, `v1` | Semver tags (published when a `v*` git tag is pushed) |
+| `sha-<short>` | Immutable build pinned to a specific commit |
+| `main` | Alias for the latest `main` build |
 
 ---
 
