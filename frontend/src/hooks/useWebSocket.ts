@@ -8,6 +8,7 @@ const DEFAULT_STATUS: ReplayStatus = {
   status: 'idle',
   packets_sent: 0,
   bytes_sent: 0,
+  total_packets: 0,
   progress_percent: 0,
   elapsed_time: 0,
   loop_count: 0,

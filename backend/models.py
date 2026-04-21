@@ -58,6 +58,7 @@ class ReplayStatus(BaseModel):
     status: str = "idle"
     packets_sent: int = 0
     bytes_sent: int = 0
+    total_packets: int = 0
     progress_percent: float = 0
     elapsed_time: float = 0
     loop_count: int = 0

@@ -100,6 +100,7 @@ export interface ReplayStatus {
   status: 'idle' | 'starting' | 'running' | 'completed' | 'failed' | 'stopped'
   packets_sent: number
   bytes_sent: number
+  total_packets: number
   progress_percent: number
   elapsed_time: number
   loop_count: number
