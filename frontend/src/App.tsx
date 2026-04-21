@@ -3,7 +3,7 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   LayoutDashboard, Play, Clock, Settings as SettingsIcon,
-  Keyboard, Square, Palette,
+  Keyboard, Square, Palette, ArrowLeftRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Layout } from './components/layout/Layout'
@@ -11,6 +11,7 @@ import { Dashboard } from './components/dashboard/Dashboard'
 import { ReplayPage } from './components/replay/ReplayPage'
 import { ReplayHistory } from './components/history/ReplayHistory'
 import { Settings } from './components/settings/Settings'
+import { ComparePage } from './components/compare/ComparePage'
 import { ShortcutsHelp } from './components/ShortcutsHelp'
 import { CommandPalette, type Command } from './components/CommandPalette'
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcut'
@@ -65,6 +66,7 @@ export default function App() {
     const list: Command[] = [
       { id: 'nav.dashboard', label: 'Go to Dashboard', group: 'Navigation', keywords: ['home'], icon: <LayoutDashboard size={14} />, onRun: nav('/') },
       { id: 'nav.replay',    label: 'Go to Replay',    group: 'Navigation', keywords: ['upload'], icon: <Play size={14} />,            onRun: nav('/replay') },
+      { id: 'nav.compare',   label: 'Go to Compare',   group: 'Navigation', keywords: ['diff', 'side by side'], icon: <ArrowLeftRight size={14} />, onRun: nav('/compare') },
       { id: 'nav.history',   label: 'Go to History',   group: 'Navigation', keywords: ['log'],    icon: <Clock size={14} />,           onRun: nav('/history') },
       { id: 'nav.settings',  label: 'Go to Settings',  group: 'Navigation', keywords: ['prefs', 'preferences'], icon: <SettingsIcon size={14} />, onRun: nav('/settings') },
       ...ACCENTS.map<Command>(a => ({
@@ -102,6 +104,7 @@ export default function App() {
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
           <Route path="/replay" element={<AnimatedPage><ReplayPage /></AnimatedPage>} />
+          <Route path="/compare" element={<AnimatedPage><ComparePage /></AnimatedPage>} />
           <Route path="/history" element={<AnimatedPage><ReplayHistory /></AnimatedPage>} />
           <Route path="/settings" element={<AnimatedPage><Settings /></AnimatedPage>} />
         </Routes>

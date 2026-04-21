@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Play, History, Settings, Menu, X, Radio } from 'lucide-react'
+import { LayoutDashboard, Play, History, Settings, Menu, X, Radio, ArrowLeftRight } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/replay', icon: Play, label: 'Upload & Replay' },
+  { to: '/compare', icon: ArrowLeftRight, label: 'Compare' },
   { to: '/history', icon: History, label: 'History' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
