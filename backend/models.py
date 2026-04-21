@@ -16,6 +16,11 @@ class FileInfo(BaseModel):
     updated_at: str
 
 
+class FilterRequest(BaseModel):
+    bpf_filter: str = Field(min_length=1, max_length=1024)
+    name: Optional[str] = Field(default=None, max_length=255)
+
+
 class FileAnalysis(BaseModel):
     file_id: str
     filename: str

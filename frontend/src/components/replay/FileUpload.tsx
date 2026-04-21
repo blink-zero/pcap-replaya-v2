@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Upload, File, Trash2, Check } from 'lucide-react'
+import { Upload, File, Trash2, Check, Filter, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { uploadFile, listFiles, deleteFile, type UploadedFile } from '../../services/api'
+import { uploadFile, listFiles, deleteFile, filterFile, type UploadedFile } from '../../services/api'
 import { cn, formatBytes, formatDate } from '../../lib/utils'
 
 interface FileUploadProps {
@@ -14,6 +14,10 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [dragOver, setDragOver] = useState(false)
+  const [filterTarget, setFilterTarget] = useState<UploadedFile | null>(null)
+  const [filterExpr, setFilterExpr] = useState('')
+  const [filterName, setFilterName] = useState('')
+  const [filtering, setFiltering] = useState(false)
 
   const loadFiles = useCallback(() => {
     listFiles().then(setFiles).catch(() => {})
@@ -56,6 +60,46 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
       loadFiles()
     } catch {
       toast.error('Failed to delete file')
+    }
+  }
+
+  const openFilter = (file: UploadedFile, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setFilterTarget(file)
+    setFilterExpr('')
+    setFilterName('')
+  }
+
+  const closeFilter = () => {
+    if (filtering) return
+    setFilterTarget(null)
+    setFilterExpr('')
+    setFilterName('')
+  }
+
+  const submitFilter = async () => {
+    if (!filterTarget) return
+    const expr = filterExpr.trim()
+    if (!expr) {
+      toast.error('Enter a BPF filter')
+      return
+    }
+    setFiltering(true)
+    try {
+      const derived = await filterFile(filterTarget.id, {
+        bpf_filter: expr,
+        name: filterName.trim() || undefined,
+      })
+      toast.success(`Filtered: ${derived.original_filename}`)
+      onSelectFile(derived)
+      loadFiles()
+      setFilterTarget(null)
+      setFilterExpr('')
+      setFilterName('')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Filter failed')
+    } finally {
+      setFiltering(false)
     }
   }
 
@@ -138,13 +182,88 @@ export function FileUpload({ selectedFile, onSelectFile }: FileUploadProps) {
                   <p className="text-xs text-zinc-500">{formatBytes(f.file_size)} · {formatDate(f.uploaded_at)}</p>
                 </div>
                 <button
+                  onClick={(e) => openFilter(f, e)}
+                  className="text-zinc-600 hover:text-cyan-400 transition-colors shrink-0"
+                  title="Filter with BPF expression"
+                >
+                  <Filter size={14} />
+                </button>
+                <button
                   onClick={(e) => handleDelete(f.id, e)}
                   className="text-zinc-600 hover:text-red-400 transition-colors shrink-0"
+                  title="Delete file"
                 >
                   <Trash2 size={14} />
                 </button>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {filterTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={closeFilter}
+        >
+          <div
+            className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-zinc-200">Filter PCAP</h3>
+              <button
+                onClick={closeFilter}
+                disabled={filtering}
+                className="text-zinc-500 hover:text-zinc-300 disabled:opacity-50"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">Source</p>
+                <p className="text-sm text-zinc-300 truncate">{filterTarget.original_filename}</p>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">BPF filter</label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={filterExpr}
+                  onChange={(e) => setFilterExpr(e.target.value)}
+                  placeholder='e.g. "tcp port 443" or "host 10.0.0.1 and not arp"'
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                />
+                <p className="text-xs text-zinc-500 mt-1">Standard tcpdump/BPF capture-filter syntax.</p>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5">New file name <span className="text-zinc-600">(optional)</span></label>
+                <input
+                  type="text"
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                  placeholder={`${filterTarget.original_filename.replace(/\.(pcap|pcapng|cap)$/i, '')}-filtered`}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-zinc-800 flex justify-end gap-2">
+              <button
+                onClick={closeFilter}
+                disabled={filtering}
+                className="px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitFilter}
+                disabled={filtering || !filterExpr.trim()}
+                className="px-3 py-1.5 text-sm bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {filtering ? 'Filtering…' : 'Create filtered copy'}
+              </button>
+            </div>
           </div>
         </div>
       )}

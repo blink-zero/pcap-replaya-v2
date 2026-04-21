@@ -168,6 +168,8 @@ export const downloadFile = (id: string) => {
   window.open(`/api/files/${id}/download`, '_blank')
 }
 export const deleteFile = (id: string) => api.delete(`/files/${id}`).then(r => r.data)
+export const filterFile = (id: string, body: { bpf_filter: string; name?: string }) =>
+  api.post<UploadedFile>(`/files/${id}/filter`, body).then(r => r.data)
 
 // Replay
 export const startReplay = (req: ReplayRequest) => api.post('/replay/start', req).then(r => r.data)

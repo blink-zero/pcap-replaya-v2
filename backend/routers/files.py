@@ -2,6 +2,7 @@ import asyncio
 import json
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from models import FilterRequest
 from services import file_service, pcap_service
 
 router = APIRouter(prefix="/files")
@@ -59,6 +60,14 @@ async def get_analysis(file_id: str):
 async def download_file(file_id: str):
     f = await file_service.get_file(file_id)
     return FileResponse(f["file_path"], filename=f["original_filename"], media_type="application/octet-stream")
+
+
+@router.post("/{file_id}/filter")
+async def filter_file(file_id: str, req: FilterRequest):
+    result = await file_service.filter_pcap(file_id, req.bpf_filter, req.name)
+    # Kick off analysis in the background, same as a fresh upload.
+    asyncio.create_task(_analyze_bg(result["id"]))
+    return result
 
 
 @router.delete("/{file_id}")
