@@ -230,6 +230,7 @@ export interface HubCapture {
   packet_count: number | null
   duration_ms: number | null
   created_at: string | null
+  sha256: string | null
   tags: string[]
   top_protocols: string[]
 }
@@ -244,7 +245,7 @@ export interface HubResults {
   meta: { total: number; page: number; limit: number; total_pages: number }
 }
 export const getHubStatus = () => api.get<HubStatus>('/pcaphub/status').then(r => r.data)
-export const searchHub = (params: { q: string; page: number; sort: string }, signal?: AbortSignal) =>
+export const searchHub = (params: { q: string; page: number; sort: 'newest'; protocol?: string; tag?: string }, signal?: AbortSignal) =>
   api.get<HubResults>('/pcaphub/search', { params, signal }).then(r => r.data)
 export const importHubCapture = (id: string) =>
   api.post<UploadedFile>(`/pcaphub/captures/${encodeURIComponent(id)}/import`).then(r => r.data)

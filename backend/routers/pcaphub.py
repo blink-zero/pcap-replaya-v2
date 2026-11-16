@@ -18,8 +18,9 @@ async def status():
 
 @router.get("/search")
 async def search(q: str = Query("", max_length=300), page: int = Query(1, ge=1, le=10000),
-                 limit: int = Query(24, ge=1, le=50), sort: Literal["newest"] = "newest"):
-    return await pcaphub_service.search(q, page, limit, sort)
+                 limit: int = Query(24, ge=1, le=50), sort: Literal["newest"] = "newest",
+                 protocol: str = Query("", max_length=100), tag: str = Query("", max_length=100)):
+    return await pcaphub_service.search(q, page, limit, sort, protocol, tag)
 
 
 @router.post("/captures/{capture_id}/import", status_code=201)

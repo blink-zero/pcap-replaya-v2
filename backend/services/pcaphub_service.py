@@ -87,10 +87,17 @@ async def _json(client: httpx.AsyncClient, path: str, params=None):
         return json.loads(body)
 
 
-async def search(q: str = "", page: int = 1, limit: int = 24, sort: str = "newest") -> dict:
+async def search(q: str = "", page: int = 1, limit: int = 24, sort: str = "newest",
+                 protocol: str = "", tag: str = "") -> dict:
+    # Singular exact-match filters verified against the public API; omit empty filters.
+    params = {"q": q, "page": page, "limit": limit, "sort": sort}
+    if protocol.strip():
+        params["protocol"] = protocol.strip()
+    if tag.strip():
+        params["tag"] = tag.strip()
     try:
         async with asyncio.timeout(30), _client() as client:
-            payload = await _json(client, "/api/search", {"q": q, "page": page, "limit": limit, "sort": sort})
+            payload = await _json(client, "/api/search", params)
             return SearchResult.model_validate(payload).model_dump(mode="json")
     except (TimeoutError, httpx.TimeoutException):
         raise HTTPException(504, "PCAPHub search timed out.") from None

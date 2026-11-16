@@ -67,6 +67,30 @@ async def test_public_search_contract_and_no_secret(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_public_search_filters_are_forwarded_without_credentials(monkeypatch):
+    def handler(request):
+        assert dict(request.url.params) == {'q': 'tunnel', 'page': '1', 'limit': '24',
+                                          'sort': 'newest', 'protocol': 'DNS', 'tag': 'dns'}
+        assert 'X-API-Key' not in request.headers and 'Authorization' not in request.headers
+        return httpx.Response(200, json={'data': [], 'meta': {'total': 0, 'page': 1, 'limit': 24, 'total_pages': 0}})
+    mock_remote(monkeypatch, handler)
+    assert (await hub.search('tunnel', protocol='DNS', tag='dns'))['data'] == []
+
+
+@pytest.mark.asyncio
+async def test_search_route_filter_validation(monkeypatch):
+    app = FastAPI()
+    app.include_router(pcaphub.router, prefix='/api')
+    search = AsyncMock(return_value={'data': []})
+    monkeypatch.setattr(hub, 'search', search)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+        assert (await client.get('/api/pcaphub/search?protocol=DNS&tag=dns')).status_code == 200
+        search.assert_awaited_once_with('', 1, 24, 'newest', 'DNS', 'dns')
+        for query in ['protocol=' + 'a' * 101, 'tag=' + 'a' * 101, 'sort=unsupported', 'page=10001']:
+            assert (await client.get('/api/pcaphub/search?' + query)).status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_valid_import_sanitizes_and_reuses_pipeline(monkeypatch):
     mock_remote(monkeypatch, download_handler(headers={'Content-Disposition': 'attachment; filename="../../evil name.pcap"'}))
     assert await hub.import_capture(ID) == {'id': 'local-id'}
