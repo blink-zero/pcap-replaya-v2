@@ -221,4 +221,32 @@ export const createProfile = (data: Omit<ConfigProfile, 'id' | 'created_at' | 'u
 export const updateProfile = (id: string, data: Partial<ConfigProfile>) => api.put<ConfigProfile>(`/profiles/${id}`, data).then(r => r.data)
 export const deleteProfile = (id: string) => api.delete(`/profiles/${id}`).then(r => r.data)
 
+export interface HubCapture {
+  id: string
+  title: string
+  username: string | null
+  description: string | null
+  file_size: number
+  packet_count: number | null
+  duration_ms: number | null
+  created_at: string | null
+  tags: string[]
+  top_protocols: string[]
+}
+export interface HubStatus {
+  import_configured: boolean
+  auth_mode: string
+  max_download_bytes: number
+  timeout_seconds: number
+}
+export interface HubResults {
+  data: HubCapture[]
+  meta: { total: number; page: number; limit: number; total_pages: number }
+}
+export const getHubStatus = () => api.get<HubStatus>('/pcaphub/status').then(r => r.data)
+export const searchHub = (params: { q: string; page: number; sort: string }, signal?: AbortSignal) =>
+  api.get<HubResults>('/pcaphub/search', { params, signal }).then(r => r.data)
+export const importHubCapture = (id: string) =>
+  api.post<UploadedFile>(`/pcaphub/captures/${encodeURIComponent(id)}/import`).then(r => r.data)
+
 export default api

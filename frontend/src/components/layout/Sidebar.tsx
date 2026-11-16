@@ -18,6 +18,7 @@ interface NavItem {
 const workflow: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/replay', icon: Play, label: 'Upload & Replay' },
+  { to: '/pcaphub', icon: Radio, label: 'PCAPHub' },
   { to: '/compare', icon: ArrowLeftRight, label: 'Compare' },
   { to: '/history', icon: History, label: 'History' },
 ]

@@ -45,7 +45,9 @@ async def api_key_middleware(request: Request, call_next):
 
 
 # Mount routers
-from routers import system, files, replay, history, profiles  # noqa: E402
+from routers import system, files, replay, history, profiles, pcaphub  # noqa: E402
+
+app.include_router(pcaphub.router, prefix="/api")
 
 app.include_router(system.router, prefix="/api")
 app.include_router(files.router, prefix="/api")

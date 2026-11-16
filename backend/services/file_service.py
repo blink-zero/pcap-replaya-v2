@@ -32,25 +32,29 @@ async def save_upload(upload: UploadFile) -> dict:
     file_path = os.path.join(settings.upload_folder, safe_name)
 
     total_size = 0
-    async with aiofiles.open(file_path, "wb") as f:
-        while True:
-            chunk = await upload.read(1024 * 1024)
-            if not chunk:
-                break
-            total_size += len(chunk)
-            if total_size > settings.max_file_size:
-                await f.close()
-                os.unlink(file_path)
-                raise HTTPException(413, f"File exceeds maximum size of {settings.max_file_size} bytes")
-            await f.write(chunk)
+    try:
+        async with aiofiles.open(file_path, "wb") as f:
+            while True:
+                chunk = await upload.read(1024 * 1024)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > settings.max_file_size:
+                    raise HTTPException(413, f"File exceeds maximum size of {settings.max_file_size} bytes")
+                await f.write(chunk)
 
-    now = _now()
-    db = await get_db()
-    await db.execute(
-        "INSERT INTO files (id, filename, original_filename, file_path, file_size, uploaded_at, updated_at) VALUES (?,?,?,?,?,?,?)",
-        (file_id, safe_name, upload.filename, file_path, total_size, now, now),
-    )
-    await db.commit()
+        now = _now()
+        db = await get_db()
+        await db.execute(
+            "INSERT INTO files (id, filename, original_filename, file_path, file_size, uploaded_at, updated_at) VALUES (?,?,?,?,?,?,?)",
+            (file_id, safe_name, upload.filename, file_path, total_size, now, now),
+        )
+        await db.commit()
+    except BaseException:
+        # Includes cancelled imports and interrupted uploads, not only IO errors.
+        if os.path.exists(file_path):
+            os.unlink(file_path)
+        raise
 
     return {
         "id": file_id,

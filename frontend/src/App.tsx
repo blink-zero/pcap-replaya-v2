@@ -12,6 +12,7 @@ import { Dashboard } from './components/dashboard/Dashboard'
 import { ReplayPage } from './components/replay/ReplayPage'
 import { ReplayHistory } from './components/history/ReplayHistory'
 import { Settings } from './components/settings/Settings'
+import { PCAPHubPage } from './components/pcaphub/PCAPHubPage'
 import { ComparePage } from './components/compare/ComparePage'
 import { ShortcutsHelp } from './components/ShortcutsHelp'
 import { CommandPalette, type Command } from './components/CommandPalette'
@@ -65,6 +66,7 @@ export default function App() {
   const commands = useMemo<Command[]>(() => {
     const nav = (path: string) => () => navigate(path)
     return [
+      { id: 'nav.pcaphub', label: 'Browse PCAPHub', group: 'Navigation', keywords: ['capture', 'search', 'import'], icon: <LayoutDashboard size={14} />, onRun: nav('/pcaphub') },
       { id: 'nav.dashboard', label: 'Go to Dashboard', group: 'Navigation', keywords: ['home'], icon: <LayoutDashboard size={14} />, onRun: nav('/') },
       { id: 'nav.replay',    label: 'Go to Replay',    group: 'Navigation', keywords: ['upload'], icon: <Play size={14} />,            onRun: nav('/replay') },
       { id: 'nav.compare',   label: 'Go to Compare',   group: 'Navigation', keywords: ['diff', 'side by side'], icon: <ArrowLeftRight size={14} />, onRun: nav('/compare') },
@@ -105,6 +107,7 @@ export default function App() {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
             <Route path="/replay" element={<AnimatedPage><ReplayPage /></AnimatedPage>} />
+            <Route path="/pcaphub" element={<AnimatedPage><PCAPHubPage /></AnimatedPage>} />
             <Route path="/compare" element={<AnimatedPage><ComparePage /></AnimatedPage>} />
             <Route path="/history" element={<AnimatedPage><ReplayHistory /></AnimatedPage>} />
             <Route path="/settings" element={<AnimatedPage><Settings /></AnimatedPage>} />

@@ -24,6 +24,64 @@ A modern web-based PCAP replay and analysis tool. Upload packet captures, analyz
 
 ---
 
+## PCAPHub capture library
+
+Open **PCAPHub** in the sidebar (or `/pcaphub`) to browse/search public captures,
+page through results, and explicitly import a capture into the local library.
+Import triggers the same background analysis as a local upload. **It never starts
+replay**: inspect the capture in **Upload & Replay**, choose an interface and
+configuration, and start replay manually. Treat public captures as untrusted;
+replay only on an authorized isolated network.
+
+Public search requires no PCAPHub credentials. Imports require these **backend-only**
+settings in `.env` (copy `.env.example` first):
+
+```dotenv
+PCAP_PCAPHUB_API_KEY=your-pcaphub-key
+PCAP_PCAPHUB_AUTH_MODE=api-key
+PCAP_PCAPHUB_MAX_DOWNLOAD_BYTES=268435456
+PCAP_PCAPHUB_TIMEOUT_SECONDS=120
+```
+
+`api-key` sends `X-API-Key`; `bearer` optionally sends `Authorization: Bearer`.
+Both Compose definitions already load `.env` only into the backend; restart/recreate
+the backend after changing settings. For native execution run from the directory
+containing `.env`, or export the variables. Never set this secret in `VITE_*`, build
+arguments, source code, or browser storage. The status endpoint returns configuration
+booleans/limits only, not the key. The existing `PCAP_API_KEY` is separate local API
+authentication. Keep the service behind your normal access controls.
+
+Imports accept UUIDs only and always use the fixed `https://pcaphub.com` API, not
+upstream `source_url` values. All redirects are rejected, including same-origin
+redirects, to avoid credential forwarding. Downloads are streamed to temporary disk
+storage with a byte limit (also capped by `PCAP_MAX_FILE_SIZE`), total timeout,
+PCAP/PCAPNG magic checks, exact metadata size, and mandatory SHA-256 verification.
+Missing/invalid hashes, compressed responses, and redirects fail closed. Temporary
+files are removed on failure; sanitized names and the normal upload pipeline are
+used only after validation. One import runs per backend worker; concurrent attempts
+receive 409. Allow disk space for both the temporary download and final saved file.
+
+Endpoints: `GET /api/pcaphub/status`, `GET /api/pcaphub/search?q=&page=1&limit=24&sort=newest`,
+`POST /api/pcaphub/captures/{uuid}/import`. Missing keys return 503 for import only;
+oversized files return 413, invalid captures 422, upstream errors 502/503, and
+upstream timeouts 504. Upstream response bodies and credentials are never forwarded.
+
+### Development verification
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r backend/requirements-dev.txt
+.venv/bin/python -m pytest -q
+npm ci --prefix frontend
+npm --prefix frontend run build
+npm --prefix frontend run lint
+curl -fsS 'https://pcaphub.com/api/search?q=&page=1&limit=1&sort=newest'
+```
+
+Backend tests mock PCAPHub and never need real credentials or transmit replay traffic.
+Native installation needs a C compiler/Python headers for `netifaces`, and the
+frontend needs a Node version supported by Vite 7 (Node 22.12+ recommended).
+
 ## 🚀 Quick Start
 
 ```bash

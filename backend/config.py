@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
+from typing import Literal
+from pydantic import Field, SecretStr
 import os
 
 
@@ -18,6 +20,11 @@ class Settings(BaseSettings):
     port: int = 8000
 
     analysis_packet_limit: int = 500_000
+
+    pcaphub_api_key: SecretStr | None = None
+    pcaphub_auth_mode: Literal["api-key", "bearer"] = "api-key"
+    pcaphub_max_download_bytes: int = Field(default=256 * 1024 * 1024, ge=24)
+    pcaphub_timeout_seconds: float = Field(default=120, gt=0, le=600)
 
     model_config = {"env_prefix": "PCAP_", "env_file": ".env"}
 
