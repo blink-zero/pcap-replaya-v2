@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Maximize2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,7 +16,8 @@ import { stopReplay, type UploadedFile } from '../../services/api'
 import { PageHeader } from '../ui'
 
 export function ReplayPage() {
-  const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null)
+  const location = useLocation()
+  const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(() => location.state?.importedFile ?? null)
   const [settings, setSettings] = useState<ReplaySettings>({
     interface: '',
     speedMultiplier: 1,

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Check, Download, ExternalLink, Loader2, Search } from 'lucide-react'
+import { Check, Download, ExternalLink, Loader2, Play, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, Panel } from '../ui'
 import { formatBytes, formatDuration, formatNumber } from '../../lib/utils'
-import { getHubStatus, importHubCapture, searchHub, type HubCapture, type HubResults, type HubStatus } from '../../services/api'
+import { getHubStatus, importHubCapture, searchHub, type HubCapture, type HubResults, type HubStatus, type UploadedFile } from '../../services/api'
 
 const button = 'inline-flex items-center justify-center gap-2 rounded-md border border-line px-3 py-2 text-xs text-ink hover:bg-panel-raised disabled:opacity-40 disabled:cursor-not-allowed'
 const input = 'rounded-md border border-line bg-panel-sunken px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-cyan-500'
@@ -15,6 +15,7 @@ function errorMessage(error: unknown) {
 }
 
 export function PCAPHubPage() {
+  const navigate = useNavigate()
   const [status, setStatus] = useState<HubStatus | null>(null)
   const [statusError, setStatusError] = useState('')
   const [draft, setDraft] = useState('')
@@ -24,7 +25,7 @@ export function PCAPHubPage() {
   const [error, setError] = useState('')
   const [pending, setPending] = useState<string | null>(null)
   const importing = useRef(false)
-  const [imported, setImported] = useState<Record<string, string>>({})
+  const [imported, setImported] = useState<Record<string, UploadedFile>>({})
 
   useEffect(() => {
     let active = true
@@ -49,14 +50,15 @@ export function PCAPHubPage() {
     setQuery(next)
   }
 
-  async function importCapture(capture: HubCapture) {
+  async function importCapture(capture: HubCapture, openReplay = false) {
     if (importing.current) return
     importing.current = true
     setPending(capture.id)
     try {
-      const file = await importHubCapture(capture.id)
-      setImported(previous => ({ ...previous, [capture.id]: file.original_filename }))
+      const file = imported[capture.id] ?? await importHubCapture(capture.id)
+      setImported(previous => ({ ...previous, [capture.id]: file }))
       toast.success(`Imported ${file.original_filename}. Replay has not started.`)
+      if (openReplay) navigate('/replay', { state: { importedFile: file } })
     } catch (e) {
       toast.error(errorMessage(e))
     } finally {
@@ -93,10 +95,15 @@ export function PCAPHubPage() {
               const oversized = !!status && capture.file_size > status.max_download_bytes
               return <Panel key={capture.id} title={capture.title} description={`By ${capture.username || 'PCAPHub contributor'}`} bodyClassName="space-y-3" footer={<div className="flex items-center justify-between gap-3">
                 <span>{oversized ? 'Exceeds import limit' : imported[capture.id] ? 'Saved to local library' : 'Import only · no replay'}</span>
+                <div className="flex flex-wrap gap-2">
                 <button className={button} disabled={!status?.import_configured || !!pending || oversized || !!imported[capture.id]} onClick={() => importCapture(capture)} aria-label={`Import ${capture.title}`}>
                   {pending === capture.id ? <Loader2 size={14} className="animate-spin" /> : imported[capture.id] ? <Check size={14} /> : <Download size={14} />}
                   {pending === capture.id ? 'Importing…' : imported[capture.id] ? 'Imported' : 'Import capture'}
                 </button>
+                <button className={button} disabled={!!pending || (!imported[capture.id] && (!status?.import_configured || oversized))} onClick={() => importCapture(capture, true)} aria-label={`Import and replay ${capture.title}`} title="Open replay setup; traffic will not start automatically">
+                  <Play size={14} />{imported[capture.id] ? 'Open Replay' : 'Import & Replay'}
+                </button>
+                </div>
               </div>}>
                 <p className="text-sm text-ink-muted line-clamp-3 break-words">{capture.description || 'No description provided.'}</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono text-ink-faint"><span>{formatBytes(capture.file_size)}</span><span>{capture.packet_count == null ? 'Unknown packet count' : `${formatNumber(capture.packet_count)} packets`}</span>{capture.duration_ms != null && <span>{formatDuration(capture.duration_ms / 1000)}</span>}</div>
